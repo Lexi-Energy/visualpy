@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-import traceback
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -11,16 +10,12 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from visualpy.mermaid import importance_score, pedagogical_flow, project_graph, script_flow
 from visualpy.models import AnalyzedProject
-from visualpy.translate import (
-    BUSINESS_LABELS,
-    TECHNICAL_LABELS,
-    TECHNICAL_LABELS_SHORT,
-    translate_connection,
-    translate_secret,
-    translate_step,
-    translate_trigger,
+from visualpy.templating import (
+    project_render_context,
+    register_globals,
+    script_render_context,
+    step_details_json,
 )
 
 _PACKAGE_DIR = Path(__file__).parent
@@ -32,51 +27,9 @@ def create_app(project: AnalyzedProject) -> FastAPI:
     """Build a FastAPI application pre-loaded with analysis results."""
     app = FastAPI(title="visualpy", docs_url=None, redoc_url=None)
     templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
-
-    # Register translation functions as Jinja2 globals for all templates.
-    templates.env.globals["biz_labels"] = BUSINESS_LABELS
-    templates.env.globals["tech_labels"] = TECHNICAL_LABELS
-    templates.env.globals["tech_labels_short"] = TECHNICAL_LABELS_SHORT
-    templates.env.globals["translate_step"] = translate_step
-    templates.env.globals["translate_trigger"] = translate_trigger
-    templates.env.globals["translate_secret"] = translate_secret
-    templates.env.globals["translate_connection"] = translate_connection
-
-    # Phase inference globals (Sprint 6.5).
-    from visualpy.translate import (
-        PHASE_LABELS,
-        compute_health,
-        deduplicate_steps,
-        detect_antipatterns,
-        explain_pattern,
-        group_steps_by_phase,
-        infer_phase,
-    )
-    templates.env.globals["infer_phase"] = infer_phase
-    templates.env.globals["group_steps_by_phase"] = group_steps_by_phase
-    templates.env.globals["phase_labels"] = PHASE_LABELS
-    templates.env.globals["deduplicate_steps"] = deduplicate_steps
-    templates.env.globals["explain_pattern"] = explain_pattern
-    templates.env.globals["detect_antipatterns"] = detect_antipatterns
-    templates.env.globals["compute_health"] = compute_health
+    register_globals(templates.env)
 
     # Fallback diagrams for error cases.
-    _GRAPH_FALLBACK = 'graph LR\n  error["Graph generation failed"]'
-    _FLOW_FALLBACK = 'graph TB\n  error["Flow generation failed for this script"]'
-    try:
-        app.state.project_graph = project_graph(project)
-    except Exception as exc:
-        traceback.print_exc(file=sys.stderr)
-        print(f"[visualpy] Warning: failed to build project graph: {exc}", file=sys.stderr)
-        app.state.project_graph = _GRAPH_FALLBACK
-    try:
-        app.state.project_graph_biz = project_graph(project, business=True)
-    except Exception as exc:
-        traceback.print_exc(file=sys.stderr)
-        print(f"[visualpy] Warning: failed to build business project graph: {exc}", file=sys.stderr)
-        # Fall back to technical graph (better than error placeholder).
-        app.state.project_graph_biz = app.state.project_graph
-
     app.state.project = project
     app.state.scripts_by_path = {s.path: s for s in project.scripts}
 
@@ -101,24 +54,10 @@ def create_app(project: AnalyzedProject) -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     async def overview(request: Request):
-        scored = sorted(
-            project.scripts,
-            key=lambda s: importance_score(s, project),
-            reverse=True,
-        )
-        # Top ~30% of scripts are "key" scripts (at least 1).
-        key_count = max(1, len(scored) // 3)
-        key_paths = {s.path for s in scored[:key_count]}
         return templates.TemplateResponse(
             request,
             "overview.html",
-            context={
-                "project": project,
-                "graph": app.state.project_graph,
-                "graph_biz": app.state.project_graph_biz,
-                "sorted_scripts": scored,
-                "key_paths": key_paths,
-            },
+            context=project_render_context(project),
         )
 
     @app.get("/health")
@@ -135,88 +74,9 @@ def create_app(project: AnalyzedProject) -> FastAPI:
                 context={"message": f"Script not found: {path}", "code": 404},
                 status_code=404,
             )
-        def _gen_flow(**kwargs: object) -> str:
-            try:
-                return script_flow(script, **kwargs)
-            except Exception as exc:
-                traceback.print_exc(file=sys.stderr)
-                label = ", ".join(f"{k}={v}" for k, v in kwargs.items()) or "detailed"
-                print(f"[visualpy] Warning: failed to build {label} flow for {path}: {exc}", file=sys.stderr)
-                return _FLOW_FALLBACK
-
-        flows: dict[str, str] = {}
-        for name, kwargs in [
-            ("flow_detailed", {}),
-            ("flow_compact", {"compact": True}),
-            ("flow_detailed_biz", {"business": True}),
-            ("flow_compact_biz", {"compact": True, "business": True}),
-        ]:
-            flows[name] = _gen_flow(**kwargs)
-
-        # Business flows fall back to their technical counterparts on error.
-        if flows["flow_detailed_biz"] == _FLOW_FALLBACK:
-            flows["flow_detailed_biz"] = flows["flow_detailed"]
-        if flows["flow_compact_biz"] == _FLOW_FALLBACK:
-            flows["flow_compact_biz"] = flows["flow_compact"]
-
-        # Pedagogical flow: simple phase pipeline for business view.
-        try:
-            flow_pedagogical = pedagogical_flow(script)
-        except Exception as exc:
-            traceback.print_exc(file=sys.stderr)
-            print(f"[visualpy] Warning: failed to build pedagogical flow for {path}: {exc}", file=sys.stderr)
-            flow_pedagogical = _FLOW_FALLBACK
-
-        total_steps = len(script.steps)
-        try:
-            phase_groups = group_steps_by_phase(script.steps)
-        except Exception as exc:
-            traceback.print_exc(file=sys.stderr)
-            print(f"[visualpy] Warning: failed to group steps by phase for {path}: {exc}", file=sys.stderr)
-            phase_groups = []
-        return templates.TemplateResponse(
-            request,
-            "script.html",
-            context={
-                "project": project,
-                "script": script,
-                "flow": flows["flow_compact"] if total_steps > 30 else flows["flow_detailed"],
-                "flow_detailed": flows["flow_detailed"],
-                "flow_compact": flows["flow_compact"],
-                "flow_detailed_biz": flows["flow_detailed_biz"],
-                "flow_compact_biz": flows["flow_compact_biz"],
-                "flow_pedagogical": flow_pedagogical,
-                "phase_groups": phase_groups,
-                "phase_summaries": script.phase_summaries or {},
-                "contextual_steps": script.contextual_steps or {},
-                "phase_risks": script.phase_risks or {},
-                "data_flow": script.data_flow,
-                "total_steps": total_steps,
-                "default_compact": total_steps > 30,
-            },
-        )
-
-    @app.get("/partials/step/{path:path}/{line}", response_class=HTMLResponse)
-    async def step_detail(request: Request, path: str, line: int):
-        script = app.state.scripts_by_path.get(path)
-        if script is None:
-            return HTMLResponse(
-                '<p class="text-sm text-red-600 dark:text-red-400">Script not found.</p>',
-                status_code=404,
-            )
-        step = next((s for s in script.steps if s.line_number == line), None)
-        if step is None:
-            return HTMLResponse(
-                '<p class="text-sm text-red-600 dark:text-red-400">Step not found at this line.</p>',
-                status_code=404,
-            )
-        contextual_desc = None
-        if script.contextual_steps:
-            contextual_desc = script.contextual_steps.get(step.line_number)
-        return templates.TemplateResponse(
-            request,
-            "partials/step_detail.html",
-            context={"step": step, "script_path": path, "contextual_desc": contextual_desc},
-        )
+        context = script_render_context(script)
+        context["project"] = project
+        context["step_details_json"] = step_details_json(templates.env, [script])
+        return templates.TemplateResponse(request, "script.html", context=context)
 
     return app

@@ -24,13 +24,17 @@ git clone https://github.com/alexmavro/visualpy.git
 cd visualpy
 pip install -e .
 
-visualpy analyze /path/to/your/scripts      # JSON breakdown
-visualpy serve /path/to/your/scripts         # starts a local web UI
+visualpy analyze /path/to/your/scripts       # JSON breakdown
+visualpy serve /path/to/your/scripts          # starts a local web UI
+visualpy export /path/to/your/scripts -o map.html   # one self-contained, offline HTML file
 
 # Optional: add plain-English LLM summaries (needs an API key)
 pip install -e ".[llm]"
 visualpy serve /path/to/your/scripts --summarize
 ```
+
+The `export` command produces a single HTML file with everything inlined — no server, no
+Python, and no internet needed to view it. Open it anywhere, or share it as one file.
 
 Requires Python 3.12 or later. No config files, no decorators in your code, no setup. Point it at a folder and go.
 
@@ -47,6 +51,7 @@ The result is a structured project map, viewable as JSON or as an interactive we
 
 ## Features
 
+- **Self-contained offline export** — `visualpy export` bundles the whole project into one HTML file (all assets inlined) that opens with no server and no internet. Send it as a single file or open it straight in a browser.
 - **Business / technical view toggle** — default view uses plain English (phases, credentials, starting scripts); toggle to the technical view for code-level detail. Both views are always available.
 - **Phase pipeline** — scripts broken into business-readable phases (Setup, Processing, Storage, Safety checks, Reporting) instead of raw function lists
 - **Project dependency graph** — see how scripts relate to each other at a glance
@@ -62,22 +67,6 @@ The result is a structured project map, viewable as JSON or as an interactive we
 - **Click-to-explore** — click a script in the project graph to see its flow; click a step to see details
 - **Zero config** — no decorators, no config files, no changes to your code
 - **Fast** — static analysis, no execution, typical projects analyzed in under 2 seconds
-
-## Roadmap
-
-| Sprint | Status | What |
-|--------|--------|------|
-| 0: Init | Done | Repo skeleton, models, CLI stubs, test fixtures |
-| 1: The Engine | Done | Folder-to-JSON analysis pipeline |
-| 1.5: Hardening | Done | Transform detection, inputs/outputs enrichment, false positive fixes |
-| 2: The Face | Done | Web UI with Mermaid.js graphs, dark mode, HTMX interactivity |
-| 3: The Community | Done | FOSS prep, docs, issue templates, CI |
-| 4: The Voice | Done | LLM summaries (litellm, BYOK), per-script and project-level descriptions |
-| 5: The Scaling Fix | Done | Compact mode, importance scoring, compact/detailed toggle |
-| 5.5: The Demo | Done | Docker deployment, pre-baked summaries, [live demo](https://visualpy.lexi-energy.com) |
-| 6: The Translation | Done | Business/technical view toggle, plain-English translation engine, phase pipeline |
-| 7: The Teacher | Done | Per-phase LLM summaries, contextual step descriptions, step deduplication, data flow narrative |
-| 8: The Critic | Done | Anti-pattern detection, health scoring, code quality insights |
 
 ## Contributing
 

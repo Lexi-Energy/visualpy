@@ -291,7 +291,7 @@ class TestCallLlm:
         )
 
 
-# --- Phase prompt building (Sprint 7) ---
+# --- Phase prompt building ---
 
 
 class TestBuildPhasePrompt:
@@ -452,7 +452,7 @@ class TestSummarizePhases:
         """One phase succeeds, others fail → partial results."""
         def side_effect(messages, model):
             content = messages[1]["content"]
-            if "Setup" in content:
+            if "Getting ready" in content:
                 return '{"phase_summary": "Sets up", "steps": {"1": "Gets data"}}'
             return None
         mock_llm.side_effect = side_effect
@@ -486,7 +486,7 @@ class TestSummarizePhases:
         """Some phases return risk, others don't → partial risks collected."""
         def side_effect(messages, model):
             content = messages[1]["content"]
-            if "Setup" in content:
+            if "Getting ready" in content:
                 return '{"phase_summary": "Sets up", "steps": {"1": "x"}, "risk": "Auth may expire"}'
             return '{"phase_summary": "Processes", "steps": {"2": "y"}}'
         mock_llm.side_effect = side_effect
@@ -554,7 +554,7 @@ class TestBuildPhasePromptRisk:
         assert '"risk"' in user_msg
 
 
-# --- Sprint 7.5: Data Flow Narrative ---
+# --- Data Flow Narrative ---
 
 
 class TestBuildDataFlowPrompt:

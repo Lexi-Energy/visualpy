@@ -187,6 +187,20 @@ def test_project_graph_connections():
     assert "import" in result
 
 
+def test_project_graph_default_click_navigates():
+    project = AnalyzedProject(path="/tmp", scripts=[AnalyzedScript(path="a.py")])
+    result = project_graph(project)
+    assert 'click n_a_py "/script/a.py"' in result
+    assert "showScript" not in result
+
+
+def test_project_graph_static_click_calls_show_script():
+    project = AnalyzedProject(path="/tmp", scripts=[AnalyzedScript(path="a.py")])
+    result = project_graph(project, static=True)
+    assert 'call showScript("a.py")' in result
+    assert '"/script/a.py"' not in result
+
+
 def test_project_graph_directory_subgraphs():
     scripts = [
         AnalyzedScript(path="src/a.py"),

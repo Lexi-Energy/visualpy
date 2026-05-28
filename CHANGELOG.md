@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- `visualpy export` command — builds a single self-contained HTML file with all assets inlined; opens with no server, no Python, and no internet (works fully offline)
+- Deterministic data-journey narrative in business view — a one-sentence "reads from … → processes → writes to …" summary that works without LLM summaries
+- Humanized script titles in business view (e.g. `client_intake.py` → "Client Intake")
+
+### Changed
+
+- Plain-English business view — anti-pattern callouts, phase labels ("Getting ready", "Safety checks", …), and trigger descriptions rewritten for non-technical readers; raw variable names and file paths no longer appear in business view
+- Frontend assets (Tailwind, Mermaid, Alpine) are now bundled with the package and served locally — the tool works offline, with no CDN dependency
+
+### Removed
+
+- HTMX dependency — step detail is now embedded directly in the page (no server round-trip)
+
+### Added (earlier in this cycle)
+
 - Anti-pattern detection — deterministic code quality analysis: print spam, phase imbalance, error handling bulk, missing error handling, heavy transforms
 - Health scoring — script cards show colored health badges (clean/minor issues/has issues/needs attention)
 - Context-aware critiques — `explain_pattern()` shifts from praise to critique at high pattern counts

@@ -1,9 +1,10 @@
-{# type_labels replaced by biz_labels / tech_labels_short Jinja2 globals from server.py #}
-
-<a href="/script/{{ script.path }}"
+<a {% if static %}href="#" onclick="showScript({{ script.path|tojson }}); return false;"{% else %}href="/script/{{ script.path }}"{% endif %}
    class="block bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-md hover:ring-1 hover:ring-blue-300 dark:hover:ring-blue-600 transition">
     <div class="flex items-center justify-between mb-1">
-        <span class="font-medium text-sm truncate" title="{{ script.path }}">{{ script.path.split('/')[-1] }}</span>
+        <span class="font-medium text-sm truncate" title="{{ script.path }}">
+            <span x-show="viewMode === 'business'">{{ humanize_filename(script.path) }}</span>
+            <span x-show="viewMode === 'technical'">{{ script.path.split('/')[-1] }}</span>
+        </span>
         <span class="flex gap-1 shrink-0 ml-2">
             {% if key_paths is defined and script.path in key_paths %}
             <span class="px-1.5 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded">key</span>
@@ -17,7 +18,7 @@
         </span>
     </div>
     {% if '/' in script.path %}
-    <p class="text-xs text-gray-400 dark:text-gray-500 truncate mb-1.5" title="{{ script.path }}">{{ script.path }}</p>
+    <p x-show="viewMode === 'technical'" class="text-xs text-gray-400 dark:text-gray-500 truncate mb-1.5" title="{{ script.path }}">{{ script.path }}</p>
     {% endif %}
     {% if script.summary %}
     <p class="text-xs text-gray-500 dark:text-gray-400 mb-1.5 line-clamp-2">{{ script.summary }}</p>
@@ -45,7 +46,7 @@
         {% if phases %}
         <span class="text-gray-300 dark:text-gray-600">|</span>
         {% for phase_key, phase_label, phase_steps in phases %}
-        <span class="px-1 py-0.5 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">{{ phase_label.split(" & ")[0].split(" ")[0] }} ({{ phase_steps|length }})</span>
+        <span class="px-1 py-0.5 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">{{ phase_label }} ({{ phase_steps|length }})</span>
         {% if not loop.last %}<span class="text-gray-300 dark:text-gray-600">&rarr;</span>{% endif %}
         {% endfor %}
         {% endif %}

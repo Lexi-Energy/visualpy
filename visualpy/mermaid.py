@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from collections import Counter
@@ -169,8 +170,12 @@ def importance_score(script: AnalyzedScript, project: AnalyzedProject) -> int:
     return score
 
 
-def project_graph(project: AnalyzedProject, *, business: bool = False) -> str:
-    """Generate a Mermaid graph showing scripts as nodes and connections as edges."""
+def project_graph(project: AnalyzedProject, *, business: bool = False, static: bool = False) -> str:
+    """Generate a Mermaid graph showing scripts as nodes and connections as edges.
+
+    When *static* is True, clicking a script calls ``showScript(path)`` (same-document
+    show/hide for the self-contained export) instead of navigating to ``/script/...``.
+    """
     lines: list[str] = ["graph LR"]
 
     # Collect scripts by directory for subgraph grouping.
@@ -207,10 +212,13 @@ def project_graph(project: AnalyzedProject, *, business: bool = False) -> str:
         label = _escape_label(edge_label)
         lines.append(f'  {src} -->|"{label}"| {tgt}')
 
-    # Click handlers: navigate to script view.
+    # Click handlers: navigate to script view, or show/hide within the static export.
     for script in project.scripts:
         sid = _sanitize_id(script.path)
-        lines.append(f'  click {sid} "/script/{script.path}"')
+        if static:
+            lines.append(f"  click {sid} call showScript({json.dumps(script.path)})")
+        else:
+            lines.append(f'  click {sid} "/script/{script.path}"')
 
     lines.append(_CLASS_DEFS)
     return "\n".join(lines)

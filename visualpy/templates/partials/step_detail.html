@@ -1,5 +1,6 @@
-{# type_labels replaced by biz_labels / tech_labels Jinja2 globals from server.py #}
-
+{# Rendered once per view mode and embedded in the page (see templating.render_step_details). #}
+{# `mode` is "business" or "technical"; defaults to business for safety. #}
+{% set mode = mode|default("business") %}
 {% set type_colors = {
     "api_call": "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200",
     "file_io": "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200",
@@ -9,21 +10,22 @@
     "transform": "bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200",
 } %}
 
-<div class="space-y-3 text-sm"
-     x-data="{ viewMode: localStorage.getItem('viewMode') || 'business' }">
+<div class="space-y-3 text-sm">
     <div class="flex items-center gap-2">
         <span class="px-2 py-0.5 text-xs font-medium rounded {{ type_colors.get(step.type, 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200') }}">
-            <span x-show="viewMode === 'business'">{{ biz_labels.get(step.type, step.type) }}</span>
-            <span x-show="viewMode === 'technical'">{{ tech_labels.get(step.type, step.type) }}</span>
+            {% if mode == 'technical' %}{{ tech_labels.get(step.type, step.type) }}{% else %}{{ biz_labels.get(step.type, step.type) }}{% endif %}
         </span>
-        <span x-show="viewMode === 'technical'" class="text-gray-400 text-xs">line {{ step.line_number }}</span>
+        {% if mode == 'technical' %}<span class="text-gray-400 text-xs">line {{ step.line_number }}</span>{% endif %}
     </div>
 
-    <p class="font-medium" x-show="viewMode === 'business'">{{ contextual_desc or translate_step(step) }}</p>
-    <p class="font-medium" x-show="viewMode === 'technical'">{{ step.description }}</p>
+    {% if mode == 'technical' %}
+    <p class="font-medium">{{ step.description }}</p>
+    {% else %}
+    <p class="font-medium">{{ contextual_desc or translate_step(step) }}</p>
+    {% endif %}
 
-    {% if step.function_name %}
-    <p x-show="viewMode === 'technical'" class="text-gray-500 dark:text-gray-400">
+    {% if mode == 'technical' and step.function_name %}
+    <p class="text-gray-500 dark:text-gray-400">
         <span class="text-xs uppercase tracking-wide">Function:</span>
         <span class="font-mono">{{ step.function_name }}()</span>
     </p>
@@ -32,11 +34,11 @@
     {% if step.service %}
     <p class="text-gray-500 dark:text-gray-400">
         <span class="text-xs uppercase tracking-wide">Service:</span>
-        {{ step.service.name }}<span x-show="viewMode === 'technical'"> ({{ step.service.library }})</span>
+        {{ step.service.name }}{% if mode == 'technical' %} ({{ step.service.library }}){% endif %}
     </p>
     {% endif %}
 
-    {% if step.inputs %}
+    {% if mode == 'technical' and step.inputs %}
     <div>
         <span class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Inputs:</span>
         <ul class="mt-0.5 space-y-0.5">
@@ -47,7 +49,7 @@
     </div>
     {% endif %}
 
-    {% if step.outputs %}
+    {% if mode == 'technical' and step.outputs %}
     <div>
         <span class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Outputs:</span>
         <ul class="mt-0.5 space-y-0.5">

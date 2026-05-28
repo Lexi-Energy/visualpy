@@ -12,10 +12,12 @@ from visualpy.translate import (
     TECHNICAL_LABELS,
     TECHNICAL_LABELS_SHORT,
     compute_health,
+    data_flow_fallback,
     deduplicate_steps,
     detect_antipatterns,
     explain_pattern,
     group_steps_by_phase,
+    humanize_filename,
     infer_phase,
     translate_connection,
     translate_secret,
@@ -24,9 +26,22 @@ from visualpy.translate import (
 )
 
 
-def _step(step_type: str, description: str, service: Service | None = None) -> Step:
+def _step(
+    step_type: str,
+    description: str,
+    service: Service | None = None,
+    inputs: list[str] | None = None,
+    outputs: list[str] | None = None,
+) -> Step:
     """Shorthand to build a Step for testing."""
-    return Step(line_number=1, type=step_type, description=description, service=service)
+    return Step(
+        line_number=1,
+        type=step_type,
+        description=description,
+        service=service,
+        inputs=inputs or [],
+        outputs=outputs or [],
+    )
 
 
 # --- translate_step: api_call ------------------------------------------------
@@ -113,8 +128,13 @@ class TestTranslateStepDecision:
         assert result == "Processes each item"
 
     def test_for_loop_complex(self):
+        # Cryptic loop variable (k) must not leak — falls back to generic phrasing.
         result = translate_step(_step("decision", "for (k, v) in data.items()"))
-        assert result == "Processes each k"
+        assert result == "Repeats for each item"
+
+    def test_for_loop_meaningful_var(self):
+        result = translate_step(_step("decision", "for customer_record in records"))
+        assert result == "Processes each customer record"
 
     def test_while_loop(self):
         result = translate_step(_step("decision", "while time.time() - start < max"))
@@ -234,11 +254,11 @@ class TestTranslateTrigger:
 
     def test_cli_main_guard(self):
         result = translate_trigger(Trigger(type="cli", detail="__main__ guard"))
-        assert result == "Can be run directly"
+        assert result == "Started manually"
 
     def test_cli_argparse(self):
         result = translate_trigger(Trigger(type="cli", detail="argparse"))
-        assert result == "Accepts command-line options"
+        assert result == "Takes settings when started"
 
     def test_cli_click(self):
         result = translate_trigger(Trigger(type="cli", detail="click: my_cmd"))
@@ -496,7 +516,7 @@ class TestGroupStepsByPhase:
     def test_phase_labels_correct(self):
         steps = [_step("api_call", "requests.get()")]
         result = group_steps_by_phase(steps)
-        assert result[0][1] == "Setup & Data Gathering"
+        assert result[0][1] == "Getting ready"
 
     def test_phase_order_respected(self):
         """Steps added in reverse order should still group in PHASE_ORDER."""
@@ -517,7 +537,7 @@ class TestGroupStepsByPhase:
             assert key in PHASE_LABELS, f"Missing label for phase {key}"
 
 
-# --- deduplicate_steps (Sprint 7) -------------------------------------------
+# --- deduplicate_steps -------------------------------------------
 
 
 class TestDeduplicateSteps:
@@ -646,7 +666,7 @@ class TestExplainPattern:
             for i in range(4)
         ]
         result = explain_pattern("Handles potential errors", steps)
-        assert "Defensive coding" in result
+        assert "Defensive design" in result
         assert "protected" in result
 
     def test_fetches_data_from_service(self):
@@ -735,7 +755,7 @@ class TestExplainPattern:
         assert "Repeated" in result or "pattern" in result.lower()
 
 
-# --- Sprint 8: context-aware explain_pattern ----------------------------------
+# --- context-aware explain_pattern ----------------------------------
 
 
 class TestExplainPatternContextAware:
@@ -744,13 +764,14 @@ class TestExplainPatternContextAware:
     def test_error_handling_low_count_praise(self):
         steps = [_step("decision", "try/except block") for _ in range(3)]
         result = explain_pattern("Handles potential errors", steps)
-        assert "Defensive coding" in result
+        assert "Defensive design" in result
 
     def test_error_handling_high_count_critique(self):
         steps = [_step("decision", "try/except block") for _ in range(8)]
         result = explain_pattern("Handles potential errors", steps)
-        assert "Repetitive" in result
+        assert "Repeated safety checks" in result
         assert "8" in result
+        assert "try/except" not in result
 
     def test_print_low_count_neutral(self):
         steps = [_step("output", "print()") for _ in range(5)]
@@ -760,8 +781,9 @@ class TestExplainPatternContextAware:
     def test_print_high_count_critique(self):
         steps = [_step("output", "print()") for _ in range(20)]
         result = explain_pattern("Displays message", steps)
-        assert "Excessive" in result
-        assert "logging" in result.lower()
+        assert "Heavy status output" in result
+        assert "print()" not in result
+        assert "logging module" not in result
 
     def test_logger_output_high_count_stays_neutral(self):
         """Logger-based output should not be critiqued even at high counts."""
@@ -770,7 +792,7 @@ class TestExplainPatternContextAware:
         assert "Status logging" in result
 
 
-# --- Sprint 8: detect_antipatterns -------------------------------------------
+# --- detect_antipatterns -------------------------------------------
 
 
 def _script_with_steps(steps: list[Step]) -> AnalyzedScript:
@@ -867,6 +889,20 @@ class TestDetectAntipatterns:
         findings = detect_antipatterns(None)
         assert findings == []
 
+    def test_findings_have_no_developer_jargon(self):
+        """Callouts render in business view — they must read for a non-dev."""
+        steps = [_step("output", f"print('{i}')") for i in range(10)]
+        steps += [_step("decision", "try/except block") for _ in range(8)]
+        steps += [_step("transform", "sorted()") for _ in range(20)]
+        steps += [_step("api_call", "requests.get()") for _ in range(5)]
+        findings = detect_antipatterns(_script_with_steps(steps))
+        assert findings, "expected several findings to inspect"
+        jargon = ("try/except", "print()", "pandas", "logging module", "helper function")
+        for f in findings:
+            text = (f["title"] + " " + f["detail"]).lower()
+            for term in jargon:
+                assert term.lower() not in text, f"{term!r} leaked into {f['id']}: {text!r}"
+
 
 class TestComputeHealth:
     def test_clean_score(self):
@@ -904,7 +940,7 @@ class TestComputeHealth:
         assert health["findings"] == []
 
 
-# --- Sprint 8: condition simplification --------------------------------------
+# --- condition simplification --------------------------------------
 
 
 class TestSimplifyCondition:
@@ -926,3 +962,60 @@ class TestSimplifyCondition:
         )
         assert "['" not in result
         assert ".get(" not in result
+
+
+class TestHumanizeFilename:
+    def test_snake_case(self):
+        assert humanize_filename("client_intake.py") == "Client Intake"
+
+    def test_strips_directory(self):
+        assert humanize_filename("src/run_pipeline.py") == "Run Pipeline"
+
+    def test_hyphen_and_dots(self):
+        assert humanize_filename("scripts/sync-leads.v2.py") == "Sync Leads V2"
+
+    def test_single_word(self):
+        assert humanize_filename("main.py") == "Main"
+
+    def test_fallback_to_stem(self):
+        assert humanize_filename("___.py") == "___"
+
+
+class TestDataFlowFallback:
+    def test_reads_and_writes_files(self):
+        steps = [
+            _step("file_io", "open('leads.csv')", inputs=["leads.csv"]),
+            _step("transform", "sorted()"),
+            _step("file_io", "open('clean.csv', 'w')", outputs=["clean.csv"]),
+        ]
+        result = data_flow_fallback(_script_with_steps(steps))
+        assert "leads.csv" in result
+        assert "clean.csv" in result
+        assert "processes" in result.lower()
+        assert result.endswith(".")
+
+    def test_service_direction(self):
+        fetch = Service(name="Google Sheets", library="gspread")
+        send = Service(name="Slack", library="slack_sdk")
+        steps = [
+            _step("api_call", "sheet.get('A1:B2')", service=fetch),
+            _step("api_call", "client.post(msg)", service=send),
+        ]
+        result = data_flow_fallback(_script_with_steps(steps))
+        assert "Google Sheets" in result  # entered as a source (.get)
+        assert "Slack" in result  # exited as a destination (.post)
+
+    def test_no_io_returns_empty(self):
+        steps = [_step("transform", "sorted()"), _step("output", "print()")]
+        assert data_flow_fallback(_script_with_steps(steps)) == ""
+
+    def test_empty_script(self):
+        assert data_flow_fallback(_script_with_steps([])) == ""
+
+    def test_ignores_non_file_inputs(self):
+        # Variable names (not files) in inputs must not appear as data sources.
+        steps = [_step("file_io", "open(path)", inputs=["raw_text", "counter"])]
+        assert data_flow_fallback(_script_with_steps(steps)) == ""
+
+    def test_exception_safe(self):
+        assert data_flow_fallback(None) == ""

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sys
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
 from visualpy.models import Step, Trigger
@@ -109,10 +110,15 @@ def _translate_decision(desc: str) -> str:
     if desc.startswith("try/except"):
         return "Handles potential errors"
     if desc.startswith("for "):
-        # "for target in iter_expr" or "for (k, v) in ..." → "Processes each target/k"
+        # "for target in iter_expr" → "Processes each target", but cryptic loop
+        # variables (i, k, _, idx, ...) leak as noise — fall back to "item".
         m = re.match(r"for\s+\(?(\w+)", desc)
         if m:
-            return f"Processes each {m.group(1)}"
+            var = m.group(1)
+            throwaway = {"i", "j", "k", "v", "n", "x", "y", "z", "_", "idx", "el", "e", "fn", "kv"}
+            if len(var) <= 1 or var.lower() in throwaway:
+                return "Repeats for each item"
+            return f"Processes each {var.replace('_', ' ').strip()}"
         return "Repeats for each item"
     if desc.startswith("while "):
         return "Repeats while condition is met"
@@ -171,6 +177,18 @@ def _clean_var(name: str) -> str:
     # Strip leading underscores
     name = name.lstrip("_")
     return name or "value"
+
+
+def humanize_filename(path: str) -> str:
+    """Turn a script path into a readable title for non-technical readers.
+
+    ``src/client_intake.py`` -> ``Client Intake``. Falls back to the raw stem
+    if nothing readable remains.
+    """
+    stem = PurePosixPath(path).stem
+    words = re.split(r"[_\-.]+", stem)
+    title = " ".join(w.capitalize() for w in words if w)
+    return title or stem or path
 
 
 def _translate_output(desc: str) -> str:
@@ -256,9 +274,9 @@ def _translate_cron(detail: str) -> str:
 
 def _translate_cli(detail: str) -> str:
     if "__main__" in detail:
-        return "Can be run directly"
+        return "Started manually"
     if "argparse" in detail:
-        return "Accepts command-line options"
+        return "Takes settings when started"
     if "click" in detail or "typer" in detail:
         dl = detail.lower()
         # "click: command_name" → "Command: command_name"
@@ -349,10 +367,10 @@ def translate_connection(conn_type: str) -> str:
 # --- Phase inference --------------------------------------------------------
 
 PHASE_LABELS: dict[str, str] = {
-    "setup": "Setup & Data Gathering",
-    "processing": "Data Processing",
-    "storage": "Storage & Delivery",
-    "error_handling": "Error Handling",
+    "setup": "Getting ready",
+    "processing": "Processing",
+    "storage": "Saving & sending",
+    "error_handling": "Safety checks",
     "reporting": "Reporting",
 }
 
@@ -454,8 +472,8 @@ def _explain_pattern_inner(desc: str, steps: list[Step]) -> str:
     if "displays message" in dl:
         if n > 10:
             return (
-                f"Excessive output \u2014 {n} print() calls; consider Python\u2019s "
-                "logging module for structured output"
+                f"Heavy status output \u2014 {n} messages shown as it runs; these vanish "
+                "when it finishes, so a permanent record would be more reliable"
             )
         return f"Status logging \u2014 tracks workflow progress across {n} checkpoints"
     if any(kw in dl for kw in ("records activity", "records a warning",
@@ -468,12 +486,13 @@ def _explain_pattern_inner(desc: str, steps: list[Step]) -> str:
     if "handles potential errors" in dl:
         if n > 5:
             return (
-                "Repetitive error handling \u2014 "
-                f"{n} identical try/except blocks suggest extracting a shared helper"
+                "Repeated safety checks \u2014 "
+                f"the same safeguard appears {n} times; bundling it into one shared "
+                "safeguard would be simpler to maintain"
             )
         return (
-            "Defensive coding \u2014 each operation is protected so one failure "
-            "doesn\u2019t crash the script"
+            "Defensive design \u2014 each step is protected so one failure "
+            "doesn\u2019t stop the whole automation"
         )
 
     # --- API patterns (extract service name after "from"/"to") ---
@@ -545,7 +564,94 @@ def group_steps_by_phase(steps: list[Step]) -> list[tuple[str, str, list[Step]]]
     return result
 
 
-# --- Anti-pattern detection (Sprint 8) ------------------------------------------
+# --- Deterministic data-flow narrative ------------------------------------------
+
+_FILE_EXT = re.compile(r"[\w\-]+\.[A-Za-z][A-Za-z0-9]{0,4}$")
+
+
+def _file_label(entry: str) -> str | None:
+    """Return a clean file name from an input/output entry, or None if not a file."""
+    name = PurePosixPath(entry.strip().strip("'\"")).name
+    return name if _FILE_EXT.match(name) else None
+
+
+def _join_human(items: list[str]) -> str:
+    """Join a short list into readable English: a, b and c (capped at 3)."""
+    if not items:
+        return ""
+    items = items[:3] + (["more"] if len(items) > 3 else [])
+    if len(items) == 1:
+        return items[0]
+    return ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def data_flow_fallback(script: "AnalyzedScript") -> str:
+    """Deterministic one-sentence data journey, used when no LLM summary exists.
+
+    Builds the journey from signals available without an API key: file reads
+    (inputs), file writes (outputs), and the direction of service calls. Mirrors
+    the enter / process / exit decomposition the Sovereignty Report will reuse.
+    Exception-safe — returns "" on any failure so the callout simply hides.
+    """
+    try:
+        return _data_flow_fallback_inner(script)
+    except Exception as exc:
+        print(
+            f"[visualpy] Warning: data_flow_fallback failed for "
+            f"{getattr(script, 'path', '?')}: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+        return ""
+
+
+def _data_flow_fallback_inner(script: "AnalyzedScript") -> str:
+    steps = script.steps
+    if not steps:
+        return ""
+
+    sources: list[str] = []  # where data enters
+    dests: list[str] = []  # where data exits
+
+    def _add(bucket: list[str], value: str) -> None:
+        if value and value not in bucket:
+            bucket.append(value)
+
+    for s in steps:
+        if s.type == "file_io":
+            for entry in s.inputs:
+                label = _file_label(entry)
+                if label:
+                    _add(sources, label)
+            for entry in s.outputs:
+                label = _file_label(entry)
+                if label:
+                    _add(dests, label)
+        elif s.type in ("api_call", "db_op") and s.service:
+            desc = s.description.lower()
+            if any(k in desc for k in _STORAGE_KEYWORDS):
+                _add(dests, s.service.name)
+            elif any(k in desc for k in _SETUP_KEYWORDS):
+                _add(sources, s.service.name)
+
+    has_transform = any(s.type == "transform" for s in steps)
+
+    if not sources and not dests:
+        return ""
+
+    parts: list[str] = []
+    if sources:
+        parts.append(f"Reads from {_join_human(sources)}")
+    if has_transform and (sources or dests):
+        parts.append("processes the data")
+    if dests:
+        verb = "writes to" if parts else "Writes to"
+        parts.append(f"{verb} {_join_human(dests)}")
+
+    sentence = ", ".join(parts)
+    return sentence[0].upper() + sentence[1:] + "." if sentence else ""
+
+
+# --- Anti-pattern detection ------------------------------------------------------
 
 
 def detect_antipatterns(script: "AnalyzedScript") -> list[dict]:
@@ -587,10 +693,11 @@ def _detect_antipatterns_inner(script: "AnalyzedScript") -> list[dict]:
         findings.append({
             "id": "print_spam",
             "severity": "warning",
-            "title": "No logging framework",
+            "title": "Lots of status messages",
             "detail": (
-                f"{len(print_steps)} print() calls found. Python\u2019s logging module "
-                "provides log levels, timestamps, and configurable output."
+                f"This automation shows {len(print_steps)} status messages as it runs. "
+                "These vanish when it finishes — a permanent, timestamped record of each run "
+                "would be more reliable."
             ),
             "count": len(print_steps),
         })
@@ -603,10 +710,11 @@ def _detect_antipatterns_inner(script: "AnalyzedScript") -> list[dict]:
             findings.append({
                 "id": "phase_imbalance",
                 "severity": "info",
-                "title": f"{phase_label} dominates",
+                "title": f"Most of the work is in: {phase_label}",
                 "detail": (
-                    f"{phase_label} accounts for {int(ratio * 100)}% of all steps "
-                    f"({len(phase_steps)}/{total}). This phase may be doing too much."
+                    f"{phase_label} is {int(ratio * 100)}% of all the steps "
+                    f"({len(phase_steps)} of {total}). When one stage does most of the work, "
+                    "the automation can be harder to follow and adjust."
                 ),
                 "phase": phase_key,
                 "count": len(phase_steps),
@@ -621,10 +729,10 @@ def _detect_antipatterns_inner(script: "AnalyzedScript") -> list[dict]:
         findings.append({
             "id": "error_handling_bulk",
             "severity": "warning",
-            "title": "Repetitive error handling",
+            "title": "Repeated safety checks",
             "detail": (
-                f"{len(error_steps)} try/except blocks. Consider extracting "
-                "a retry/error-handling helper function."
+                f"The same kind of safety check appears {len(error_steps)} times. "
+                "Bundling it into one shared safeguard would make the automation simpler to maintain."
             ),
             "count": len(error_steps),
         })
@@ -638,10 +746,11 @@ def _detect_antipatterns_inner(script: "AnalyzedScript") -> list[dict]:
             findings.append({
                 "id": "no_error_handling",
                 "severity": "concern",
-                "title": "No error handling",
+                "title": "No safety net",
                 "detail": (
-                    "This script has no try/except blocks. External service calls "
-                    "and file operations should be wrapped in error handling."
+                    "This automation calls outside services and works with files but has no "
+                    "fallback if something goes wrong. If a service is down or a file is missing, "
+                    "it could stop unexpectedly."
                 ),
                 "count": 0,
             })
@@ -654,10 +763,10 @@ def _detect_antipatterns_inner(script: "AnalyzedScript") -> list[dict]:
                 findings.append({
                     "id": "transform_heavy",
                     "severity": "info",
-                    "title": "Heavy data manipulation",
+                    "title": "Heavy data work",
                     "detail": (
-                        f'"{desc}" appears {len(group)} times. Complex transform '
-                        "chains may benefit from a data pipeline library (pandas, etc.)."
+                        f'The same data step ("{desc}") repeats {len(group)} times. '
+                        "A dedicated data tool could handle this more simply."
                     ),
                     "count": len(group),
                 })

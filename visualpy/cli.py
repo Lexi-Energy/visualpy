@@ -60,6 +60,24 @@ def app():
         help="Generate LLM summaries (requires API key, install with pip install visualpy[llm])",
     )
 
+    export_parser = subparsers.add_parser(
+        "export", help="Build a single self-contained, offline HTML file"
+    )
+    export_parser.add_argument("path", nargs="?", default=None, help="Path to folder to analyze")
+    export_parser.add_argument(
+        "--output", "-o", default="visualpy.html", help="Output HTML file (default: visualpy.html)"
+    )
+    export_parser.add_argument(
+        "--from-json",
+        dest="from_json",
+        help="Load pre-computed analysis from JSON file instead of scanning",
+    )
+    export_parser.add_argument(
+        "--summarize",
+        action="store_true",
+        help="Generate LLM summaries (requires API key, install with pip install visualpy[llm])",
+    )
+
     args = parser.parse_args()
 
     if args.command is None:
@@ -71,6 +89,9 @@ def app():
 
     if args.command == "serve":
         _run_serve(args)
+
+    if args.command == "export":
+        _run_export(args)
 
 
 def _build_project(target: Path) -> AnalyzedProject:
@@ -201,12 +222,11 @@ def _project_from_dict(data: dict) -> AnalyzedProject:
     )
 
 
-def _run_serve(args: argparse.Namespace) -> None:
-    """Analyze the target and start the web UI."""
-    import uvicorn
+def _load_project(args: argparse.Namespace) -> AnalyzedProject:
+    """Resolve an AnalyzedProject from either --from-json or a folder path.
 
-    from visualpy.server import create_app
-
+    Shared by the `serve` and `export` commands. Exits on invalid input.
+    """
     if args.from_json:
         if args.path:
             print(
@@ -256,7 +276,16 @@ def _run_serve(args: argparse.Namespace) -> None:
         f"{len(project.connections)} connections",
         file=sys.stderr,
     )
+    return project
 
+
+def _run_serve(args: argparse.Namespace) -> None:
+    """Analyze the target and start the web UI."""
+    import uvicorn
+
+    from visualpy.server import create_app
+
+    project = _load_project(args)
     app = create_app(project)
     print(f"[visualpy] Serving at http://{args.host}:{args.port}", file=sys.stderr)
     try:
@@ -268,3 +297,17 @@ def _run_serve(args: argparse.Namespace) -> None:
             file=sys.stderr,
         )
         sys.exit(1)
+
+
+def _run_export(args: argparse.Namespace) -> None:
+    """Build a single self-contained HTML file from the analysis."""
+    from visualpy.export import build_static_html
+
+    project = _load_project(args)
+    html = build_static_html(project)
+    try:
+        Path(args.output).write_text(html, encoding="utf-8")
+    except OSError as exc:
+        print(f"[visualpy] Error: could not write output file: {exc}", file=sys.stderr)
+        sys.exit(1)
+    print(f"[visualpy] Exported self-contained HTML to {args.output}")

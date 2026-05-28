@@ -195,7 +195,38 @@ def test_serve_requires_path_or_from_json():
     assert "Error" in result.stderr or "required" in result.stderr.lower()
 
 
-# --- Sprint 7: phase_summaries + contextual_steps ---
+def test_export_writes_self_contained_html(fixtures_dir, tmp_path):
+    out_file = tmp_path / "out.html"
+    result = subprocess.run(
+        [sys.executable, "-m", "visualpy", "export", str(fixtures_dir), "-o", str(out_file)],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    assert out_file.exists()
+    html = out_file.read_text()
+    assert html.lstrip().startswith("<!DOCTYPE html>")
+    assert 'src="http' not in html and 'href="http' not in html  # offline
+
+
+def test_export_from_json_roundtrip(hello_script, tmp_path):
+    json_file = tmp_path / "analysis.json"
+    subprocess.run(
+        [sys.executable, "-m", "visualpy", "analyze", str(hello_script), "-o", str(json_file)],
+        capture_output=True, text=True, check=True,
+    )
+    out_file = tmp_path / "out.html"
+    result = subprocess.run(
+        [sys.executable, "-m", "visualpy", "export", "--from-json", str(json_file), "-o", str(out_file)],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    assert out_file.exists()
+    assert "hello" in out_file.read_text().lower()
+
+
+# --- phase_summaries + contextual_steps ---
 
 
 def test_project_from_dict_with_phase_summaries():
@@ -283,7 +314,7 @@ def test_project_from_dict_contextual_steps_none():
     assert restored.scripts[0].phase_summaries is None
 
 
-# --- Sprint 7.5: phase_risks ---
+# --- phase_risks ---
 
 
 def test_project_from_dict_with_phase_risks():
@@ -323,7 +354,7 @@ def test_project_from_dict_backward_compat_no_risks():
     assert restored.scripts[0].phase_risks is None
 
 
-# --- Sprint 7.5: data_flow ---
+# --- data_flow ---
 
 
 def test_project_from_dict_with_data_flow():

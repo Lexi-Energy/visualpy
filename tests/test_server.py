@@ -177,38 +177,43 @@ async def test_script_not_found(client):
     assert "not found" in resp.text.lower()
 
 
-# --- Step detail partial ---
+# --- Step detail ---
 
 @pytest.mark.anyio
-async def test_step_detail_returns_fragment(client):
+async def test_step_detail_embedded_in_page(client):
+    """Step detail is baked into the page as JSON, keyed by path::line."""
     async with AsyncClient(transport=ASGITransport(app=client), base_url="http://test") as ac:
-        resp = await ac.get("/partials/step/example.py/5")
+        resp = await ac.get("/script/example.py")
     assert resp.status_code == 200
-    assert "API Call" in resp.text
+    assert "example.py::5" in resp.text
     assert "requests.get()" in resp.text
 
 
 @pytest.mark.anyio
-async def test_step_detail_shows_function_name(client):
+async def test_step_detail_has_both_view_variants(client):
+    """Embedded entries carry both a business and a technical rendering."""
+    import json
+
+    async with AsyncClient(transport=ASGITransport(app=client), base_url="http://test") as ac:
+        resp = await ac.get("/script/example.py")
+    start = resp.text.index('<script id="step-details" type="application/json">') + len(
+        '<script id="step-details" type="application/json">'
+    )
+    end = resp.text.index("</script>", start)
+    raw = resp.text[start:end]
+    details = json.loads(raw)
+    entry = details["example.py::5"]
+    assert set(entry) == {"business", "technical"}
+    assert "fetch()" in entry["technical"]  # function name shown in technical only
+    assert "fetch()" not in entry["business"]
+
+
+@pytest.mark.anyio
+async def test_step_detail_no_partial_route(client):
+    """The old HTMX partial route is gone — step detail is fully embedded."""
     async with AsyncClient(transport=ASGITransport(app=client), base_url="http://test") as ac:
         resp = await ac.get("/partials/step/example.py/5")
-    assert "fetch()" in resp.text
-
-
-@pytest.mark.anyio
-async def test_step_detail_not_found_script(client):
-    async with AsyncClient(transport=ASGITransport(app=client), base_url="http://test") as ac:
-        resp = await ac.get("/partials/step/nope.py/1")
     assert resp.status_code == 404
-    assert "not found" in resp.text.lower()
-
-
-@pytest.mark.anyio
-async def test_step_detail_not_found_line(client):
-    async with AsyncClient(transport=ASGITransport(app=client), base_url="http://test") as ac:
-        resp = await ac.get("/partials/step/example.py/999")
-    assert resp.status_code == 404
-    assert "not found" in resp.text.lower()
 
 
 # --- Dark mode toggle ---
@@ -545,7 +550,7 @@ async def test_script_triggers_translated():
     app = create_app(project)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/script/job.py")
-    assert "Can be run directly" in resp.text
+    assert "Started manually" in resp.text
 
 
 @pytest.mark.anyio
@@ -563,7 +568,7 @@ async def test_script_secrets_translated():
     assert "AWS credentials" in resp.text
 
 
-# --- Pedagogical flow + phase groups (Sprint 6.5) ---
+# --- Pedagogical flow + phase groups ---
 
 
 @pytest.mark.anyio
@@ -595,7 +600,7 @@ async def test_script_view_has_phase_groups():
     app = create_app(project)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/script/job.py")
-    assert "Setup &amp; Data Gathering" in resp.text or "Setup & Data Gathering" in resp.text
+    assert "Getting ready" in resp.text
     assert "Reporting" in resp.text
 
 
@@ -625,7 +630,7 @@ async def test_script_view_business_layout_has_details():
     assert "<details" in resp.text
 
 
-# --- Phase summaries + contextual descriptions (Sprint 7) ---
+# --- Phase summaries + contextual descriptions ---
 
 
 @pytest.mark.anyio
@@ -674,7 +679,7 @@ async def test_script_view_shows_contextual_description():
 
 @pytest.mark.anyio
 async def test_step_detail_shows_contextual_description():
-    """Step detail partial should show contextual description when available."""
+    """Embedded step detail should use the contextual description when available."""
     steps = [Step(line_number=5, type="file_io", description="json.dump()")]
     script = AnalyzedScript(
         path="detail.py",
@@ -684,19 +689,19 @@ async def test_step_detail_shows_contextual_description():
     project = AnalyzedProject(path="/tmp", scripts=[script])
     app = create_app(project)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        resp = await ac.get("/partials/step/detail.py/5")
+        resp = await ac.get("/script/detail.py")
     assert "Saves the cleaned customer records to a JSON backup" in resp.text
 
 
 @pytest.mark.anyio
 async def test_step_detail_falls_back_to_translate():
-    """Without contextual_steps, step detail should fall back to translate_step."""
+    """Without contextual_steps, embedded step detail falls back to translate_step."""
     steps = [Step(line_number=5, type="output", description="print(result)")]
     script = AnalyzedScript(path="fallback.py", steps=steps)
     project = AnalyzedProject(path="/tmp", scripts=[script])
     app = create_app(project)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        resp = await ac.get("/partials/step/fallback.py/5")
+        resp = await ac.get("/script/fallback.py")
     assert "Displays message" in resp.text
 
 
@@ -712,8 +717,8 @@ async def test_deduplicate_global_registered():
 
 
 @pytest.mark.anyio
-async def test_dedup_renders_locations_count():
-    """Duplicate steps should show 'N locations' in the response."""
+async def test_dedup_renders_repeat_count():
+    """Duplicate steps should show the repeat count in the response."""
     steps = [
         Step(line_number=i, type="decision", description=f"try/except e{i}")
         for i in range(1, 4)
@@ -723,7 +728,7 @@ async def test_dedup_renders_locations_count():
     app = create_app(project)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/script/dupes.py")
-    assert "3 locations" in resp.text
+    assert "3 times" in resp.text
 
 
 @pytest.mark.anyio
@@ -738,7 +743,7 @@ async def test_dedup_renders_pattern_insight():
     app = create_app(project)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/script/dupes.py")
-    assert "Defensive coding" in resp.text
+    assert "Defensive design" in resp.text
 
 
 @pytest.mark.anyio
@@ -799,7 +804,7 @@ async def test_no_crash_without_data_flow():
     assert "Data Journey" not in resp.text
 
 
-# --- Sprint 8: anti-pattern detection UI ---
+# --- anti-pattern detection UI ---
 
 
 @pytest.mark.anyio
@@ -812,7 +817,7 @@ async def test_antipattern_callouts_render():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/script/messy.py")
     assert resp.status_code == 200
-    assert "No logging framework" in resp.text
+    assert "Lots of status messages" in resp.text
 
 
 @pytest.mark.anyio
@@ -829,8 +834,8 @@ async def test_clean_script_no_callouts():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/script/clean.py")
     assert resp.status_code == 200
-    assert "No logging framework" not in resp.text
-    assert "Repetitive error handling" not in resp.text
+    assert "Lots of status messages" not in resp.text
+    assert "Repeated safety checks" not in resp.text
 
 
 @pytest.mark.anyio

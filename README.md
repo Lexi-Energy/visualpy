@@ -9,7 +9,7 @@ Auto-visualise Python automations so that even non-dev people can understand wha
 
 Drop a folder of Python scripts, get a visual breakdown of what they do, how they connect, and what they need. No execution required, no config needed.
 
-**[Live demo](https://visualpy.lexi-energy.com)** — see it in action on a real 8-script lead generation pipeline.
+**[Live demo](https://visualpy.lexi-energy.com)** — see it in action on a real 10-script automation project.
 
 ## Who is this for?
 
@@ -31,6 +31,12 @@ visualpy export /path/to/your/scripts -o map.html   # one self-contained, offlin
 # Optional: add plain-English LLM summaries (needs an API key)
 pip install -e ".[llm]"
 visualpy serve /path/to/your/scripts --summarize
+visualpy export /path/to/your/scripts -o map.html --summarize   # summaries baked into the file
+
+# Analyze once, reuse the result (no re-scan, no repeat LLM calls)
+visualpy analyze /path/to/your/scripts --summarize -o project.json
+visualpy serve  --from-json project.json
+visualpy export --from-json project.json -o map.html
 ```
 
 The `export` command produces a single HTML file with everything inlined — no server, no
@@ -57,7 +63,8 @@ The result is a structured project map, viewable as JSON or as an interactive we
 - **Project dependency graph** — see how scripts relate to each other at a glance
 - **Per-script flow diagrams** — step-by-step visual breakdown of what each file does, grouped by function
 - **Compact mode** — functions with many steps auto-collapse to readable summaries; toggle between compact and detailed views
-- **LLM summaries** — optional plain-English descriptions powered by any LLM provider via litellm (BYOK). `--summarize` flag on both `analyze` and `serve`
+- **LLM summaries** — optional plain-English descriptions powered by any LLM provider via litellm (BYOK). `--summarize` flag on `analyze`, `serve`, and `export`
+- **Analyze once, reuse anywhere** — `visualpy analyze -o project.json` saves the full breakdown (summaries included); `serve` and `export` can load it with `--from-json`, so you never re-scan or repeat LLM calls
 - **Per-phase summaries and data flow** — with `--summarize`, each phase gets a 1-2 sentence description and the script gets a "data journey" narrative
 - **Code quality insights** — detects common issues (missing error handling, excessive print() calls, unbalanced phases) and shows a health badge per script
 - **Importance scoring** — scripts sorted by connectivity; most important scripts highlighted with a "key" badge

@@ -1,6 +1,6 @@
 # Contributing to visualpy
 
-Whether you're a developer, a manager, or someone who just started using GitHub last week — you're welcome here. Every contribution matters, even a typo fix (although pls don't overdue it with issue reports and PRs on small stuff, combine them and be reasonable, I am but one person and have a job xD).
+Whether you're a developer, a manager, or someone who just started using GitHub last week — you're welcome here. Every contribution matters, even a typo fix (although pls don't overdo it with issue reports and PRs on small stuff, combine them and be reasonable, I am but one person and have a job xD).
 
 Not sure where to start? Read on. We've written this guide for people who might be new to open source.
 
@@ -90,13 +90,17 @@ A quick orientation:
 ```
 visualpy/
   analyzer/      Analysis engine (AST parsing, service detection, etc.)
-  templates/     Jinja2 HTML templates for the web UI
+  summarizer/    Optional LLM summary pipeline (litellm, BYOK)
+  templates/     Jinja2 HTML templates for the web UI and offline export
   mermaid.py     Mermaid.js graph generation
+  translate.py   Business-language translation engine
+  templating.py  Shared template context builders (server + export)
   server.py      FastAPI web server
+  export.py      Single-file offline HTML export
   cli.py         Command-line interface
   models.py      Data models
-tests/           Test suite (140+ tests)
-static/          CSS and assets
+tests/           Test suite (480+ tests)
+static/          Frontend assets: CSS, JavaScript, and vendored libraries (Tailwind, Mermaid, Alpine)
 ```
 
 ## What we look for in pull requests

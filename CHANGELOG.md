@@ -11,6 +11,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `visualpy export` command — builds a single self-contained HTML file with all assets inlined; opens with no server, no Python, and no internet (works fully offline)
 - Deterministic data-journey narrative in business view — a one-sentence "reads from … → processes → writes to …" summary that works without LLM summaries
 - Humanized script titles in business view (e.g. `client_intake.py` → "Client Intake")
+- Anti-pattern detection — deterministic code quality analysis: print spam, phase imbalance, error handling bulk, missing error handling, heavy transforms
+- Health scoring — script cards show colored health badges (clean/minor issues/has issues/needs attention)
+- Context-aware pattern insights — `explain_pattern()` gives teaching notes at normal pattern counts and constructive critique at high counts; exception-safe fallback
+- Anti-pattern callout cards on script pages with severity-colored icons (red/amber/blue)
+- Phase proportion percentage on accordion headers when >40% of total steps
+- Credential deduplication in overview business view
+- Condition simplification — business view cleans dict access and .get() patterns from if-conditions
+- Risk annotations — per-phase "what could go wrong?" warnings piggybacked on existing LLM calls (zero extra cost)
+- Data flow narrative — LLM-generated "data journey" callout (e.g., "Reads from Google Sheets → enriches via API → updates sheet")
+- Per-phase LLM summaries — contextual 1-2 sentence descriptions for each business phase (Setup, Processing, Storage, etc.)
+- Contextual step descriptions — LLM-generated unique descriptions replacing repeated generic phrasing
+- Step deduplication — identical business descriptions collapsed into expandable "Description (N locations)" groups
+- Phase summaries shown in accordion headers with blue left-border styling
+- Step detail panel shows contextual description when available (falls back to deterministic translation)
+- Business/Technical view toggle — switch between plain-English and developer views (persisted in localStorage)
+- Business-language translation engine — plain-English step descriptions, triggers, secrets, and connection types
+- Business-mode Mermaid diagrams — pre-rendered flow variants (detailed/compact × technical/business)
+- Translated UI labels: "External Service" not "API Call", "Runs daily at midnight" not "0 0 * * *", "AWS credentials" not "AWS_SECRET_ACCESS_KEY"
+- Per-step error isolation in business mode — one bad translation doesn't kill the whole diagram
+- Phase inference — steps grouped by business intent (Setup, Processing, Storage, Safety checks, Reporting) instead of function names
+- Pedagogical diagram — simple 3-5 phase pipeline replaces large flowcharts in business view
+- Progressive disclosure — business view shows summary first, phase accordions, then collapsed technical diagram
+- Compact mode for script flow diagrams — long functions collapse to summary nodes
+- Importance scoring — overview sorted by connectivity, entry points, and services, with a "key" badge on top scripts
+- LLM-generated plain-English summaries via litellm (BYOK — bring your own key); `--summarize` flag on `analyze`, `serve`, and `export`
+- Per-script summaries, per-project executive summary, and model override via `VISUALPY_MODEL`
+- `--from-json` — reuse a saved analysis (summaries and phase descriptions included) without re-scanning or repeating LLM calls
+- Graceful degradation when litellm is not installed or no API key is set
+- Dockerfile + docker-compose for public demo deployment (pre-baked LLM summaries)
+- README, CONTRIBUTING, CODE_OF_CONDUCT (Contributor Covenant v2.1), and SECURITY policy
+- GitHub issue templates, pull request template, and CI pipeline (tests on push and PR)
+- CHANGELOG (this file, retroactive)
 
 ### Changed
 
@@ -20,59 +52,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 
 - HTMX dependency — step detail is now embedded directly in the page (no server round-trip)
-
-### Added (earlier in this cycle)
-
-- Anti-pattern detection — deterministic code quality analysis: print spam, phase imbalance, error handling bulk, missing error handling, heavy transforms
-- Health scoring — script cards show colored health badges (clean/minor issues/has issues/needs attention)
-- Context-aware critiques — `explain_pattern()` shifts from praise to critique at high pattern counts
-- Anti-pattern callout cards on script pages with severity-colored icons (red/amber/blue)
-- Phase proportion percentage on accordion headers when >40% of total steps
-- Credential deduplication in overview business view
-- Condition simplification — business view cleans dict access and .get() patterns from if-conditions
-- Pattern insights — deterministic teaching explanations for dedup groups (e.g., "Status logging — tracks workflow progress across 20 checkpoints")
-- Risk annotations — per-phase "what could go wrong?" warnings piggybacked on existing LLM calls (zero extra cost)
-- Data flow narrative — LLM-generated "data journey" callout (e.g., "Reads from Google Sheets → enriches via API → updates sheet")
-- `explain_pattern()` in translate.py — keyword-matched insights for all dedup patterns with exception-safe fallback
-- `summarize_data_flow()` in summarizer — 1 LLM call per script for data journey narrative
-- Per-phase LLM summaries — contextual 1-2 sentence descriptions for each business phase (Setup, Processing, Storage, etc.)
-- Contextual step descriptions — LLM-generated unique descriptions replacing generic "Handles potential errors" x9
-- Step deduplication — identical business descriptions collapsed into expandable "Description (N locations)" groups
-- `summarize_phases()` in summarizer — one LLM call per phase, JSON structured output, robust parser
-- Phase summaries shown in accordion headers with blue left-border styling
-- Step detail panel shows contextual description when available (falls back to deterministic translation)
-- `--from-json` roundtrip preserves new phase_summaries and contextual_steps fields
-- Business/Technical view toggle — switch between plain-English and developer views (persisted in localStorage)
-- `translate.py` module — deterministic business-language translations for step descriptions, triggers, secrets, connection types
-- Business-mode Mermaid diagrams — 4 pre-rendered flow variants (detailed/compact × tech/business)
-- Translated UI labels: "External Service" not "API Call", "Runs daily at midnight" not "0 0 * * *", "AWS credentials" not "AWS_SECRET_ACCESS_KEY"
-- Jinja2 template globals for translation functions — eliminates duplicated label dicts
-- Per-step error isolation in business mode — one bad translation doesn't kill the whole diagram
-- Phase inference — steps grouped by business intent (Setup, Processing, Storage, Error Handling, Reporting) instead of function names
-- Pedagogical diagram — simple 3-5 phase pipeline replaces 50-node flowcharts in business view
-- Progressive disclosure — business view shows summary first, phase accordions, then collapsed technical diagram
-- Layout restructure — business view is a completely different layout (no sidebar, no grid, narrative-first)
-- `--from-json` flag for `serve` command — load pre-computed analysis from JSON file
-- Dockerfile + docker-compose for public demo deployment (pre-baked LLM summaries)
-- Compact mode for script flow diagrams — functions with >8 steps collapse to summary nodes
-- Compact/Detailed toggle button on script pages (auto-shown for scripts with >30 steps)
-- Importance scoring for scripts — overview sorted by connectivity, entry points, services
-- "Key" badge on top scripts in overview
-- LLM-generated plain-English summaries via litellm (BYOK — bring your own key)
-- `--summarize` CLI flag for `analyze` and `serve` commands
-- Per-script summaries from structured AST data (steps, services, triggers)
-- Per-project executive summary from script summaries and connections
-- Model override via `VISUALPY_MODEL` environment variable (default: `gemini/gemini-2.5-flash`)
-- Summary rendering in web UI: overview header, script cards, script headers
-- Graceful degradation when litellm not installed or API key missing
-- README with badges, personas, quick start, roadmap, and acknowledgments
-- CONTRIBUTING.md with non-dev-friendly contribution guide
-- CODE_OF_CONDUCT.md (Contributor Covenant v2.1)
-- SECURITY.md with responsible disclosure policy
-- GitHub issue templates (bug report, feature request, question)
-- Pull request template
-- GitHub Actions CI pipeline (tests on push and PR)
-- CHANGELOG.md (this file, retroactive)
 
 ## [0.1.0] - 2026-04-01
 

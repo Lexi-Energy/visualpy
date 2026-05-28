@@ -14,12 +14,9 @@ The web UI (`visualpy serve`) runs a local FastAPI server. By default it binds t
 
 ## Reporting a vulnerability
 
-If you find a security issue, please report it responsibly:
+If you find a security issue, please report it responsibly by [opening a private security advisory](https://github.com/alexmavro/visualpy/security/advisories/new) on GitHub.
 
-1. **Open a private security advisory** on GitHub: [New Security Advisory](https://github.com/alexmavro/visualpy/security/advisories/new)
-2. Or email the maintainer directly (see GitHub profile for contact info)
-
-Please do not open a public issue for security vulnerabilities.
+Please do not open a public issue for security vulnerabilities. also don't mail me randomly, which bots do when you put a mail on github apparently ... so no personal mail from me.
 
 We will acknowledge reports within 48 hours and aim to provide a fix or mitigation within 7 days for confirmed issues.
 

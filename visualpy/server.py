@@ -57,7 +57,7 @@ def create_app(project: AnalyzedProject) -> FastAPI:
         return templates.TemplateResponse(
             request,
             "overview.html",
-            context=project_render_context(project),
+            context=project_render_context(project, static=False),
         )
 
     @app.get("/health")
@@ -74,7 +74,7 @@ def create_app(project: AnalyzedProject) -> FastAPI:
                 context={"message": f"Script not found: {path}", "code": 404},
                 status_code=404,
             )
-        context = script_render_context(script)
+        context = script_render_context(script, static=False)
         context["project"] = project
         context["step_details_json"] = step_details_json(templates.env, [script])
         return templates.TemplateResponse(request, "script.html", context=context)

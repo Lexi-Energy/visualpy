@@ -12,6 +12,8 @@
             var src = document.getElementById('graph-tech');
             var el = document.querySelector('#tech-graph-container .mermaid');
             if (src && el) {
+                if (el.dataset.rendering === '1') return;  // guard against concurrent run() on rapid toggle
+                el.dataset.rendering = '1';
                 var code = src.textContent.trim();
                 el.setAttribute('data-mermaid-src', code);
                 el.removeAttribute('data-processed');
@@ -21,6 +23,7 @@
                     console.error('[visualpy] Mermaid re-render failed:', err);
                     el.innerHTML = '<p class="text-sm text-red-600 dark:text-red-400">Diagram failed to render. Try refreshing the page.</p>';
                 }
+                finally { delete el.dataset.rendering; }
             }
         }
     }

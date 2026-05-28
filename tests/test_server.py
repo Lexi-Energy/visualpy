@@ -883,3 +883,20 @@ async def test_credential_dedup_overview():
     biz_count = text.count("PandaDoc credentials")
     # The dedup list renders once; raw technical list has all 3 PANDADOC_* entries
     assert biz_count == 1
+
+
+@pytest.mark.anyio
+async def test_unhandled_error_renders_500_page(client, monkeypatch):
+    """An unexpected render failure is caught and shown as a 500 page, not a crash."""
+    import visualpy.server as server_mod
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("render exploded")
+
+    monkeypatch.setattr(server_mod, "script_render_context", boom)
+    transport = ASGITransport(app=client, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.get("/script/example.py")
+    assert resp.status_code == 500
+    assert "500" in resp.text
+    assert "went wrong" in resp.text.lower()

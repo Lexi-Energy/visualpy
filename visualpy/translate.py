@@ -262,10 +262,11 @@ def translate_trigger(trigger: Trigger) -> str:
 
 
 def _translate_cron(detail: str) -> str:
+    normalized = " ".join(detail.split())
     for pattern, human in _CRON_PATTERNS:
-        if pattern in detail:
+        if normalized == pattern:
             return human
-    m = _CRON_INTERVAL.match(detail)
+    m = _CRON_INTERVAL.match(normalized)
     if m:
         interval = int(m.group(1))
         return f"Runs every {interval} minutes"
@@ -589,8 +590,8 @@ def data_flow_fallback(script: "AnalyzedScript") -> str:
     """Deterministic one-sentence data journey, used when no LLM summary exists.
 
     Builds the journey from signals available without an API key: file reads
-    (inputs), file writes (outputs), and the direction of service calls. Mirrors
-    the enter / process / exit decomposition the Sovereignty Report will reuse.
+    (inputs), file writes (outputs), and the direction of service calls,
+    decomposed as what enters / processes locally / exits.
     Exception-safe — returns "" on any failure so the callout simply hides.
     """
     try:

@@ -8,7 +8,7 @@ import sys
 from collections import Counter
 from pathlib import PurePosixPath
 
-from visualpy.models import AnalyzedProject, AnalyzedScript, ScriptConnection, Step
+from visualpy.models import AnalyzedProject, AnalyzedScript, Step
 from visualpy.translate import (
     BUSINESS_LABELS,
     PHASE_LABELS,

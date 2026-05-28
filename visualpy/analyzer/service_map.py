@@ -48,7 +48,6 @@ SERVICE_MAP: dict[str, tuple[str, str | None]] = {
     "selenium": ("Selenium", "selenium"),
     "playwright": ("Playwright", "playwright"),
     "scrapy": ("Scrapy", "scrapy"),
-    "beautifulsoup4": ("BeautifulSoup", "bs4"),
     "bs4": ("BeautifulSoup", "bs4"),
     "apify_client": ("Apify", "apify"),
     # File / storage

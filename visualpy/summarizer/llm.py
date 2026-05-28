@@ -150,7 +150,7 @@ def _build_data_flow_prompt(script: AnalyzedScript) -> list[dict]:
 
     # Summarize steps by phase (types + counts, not full details).
     phase_lines = []
-    for phase_key, phase_label, steps in group_steps_by_phase(script.steps):
+    for _phase_key, phase_label, steps in group_steps_by_phase(script.steps):
         type_counts: dict[str, int] = {}
         for step in steps:
             type_counts[step.type] = type_counts.get(step.type, 0) + 1
@@ -212,7 +212,7 @@ def summarize_phases(
 
     for phase_key, phase_label, steps in phases:
         summary, step_descs, risk = _summarize_single_phase(
-            script, phase_key, phase_label, steps, model
+            script, phase_label, steps, model
         )
         if summary:
             phase_summaries[phase_key] = summary
@@ -227,7 +227,6 @@ def summarize_phases(
 
 def _summarize_single_phase(
     script: AnalyzedScript,
-    phase_key: str,
     phase_label: str,
     steps: list[Step],
     model: str,

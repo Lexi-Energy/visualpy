@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 
-from visualpy.export import build_static_html
+import pytest
+
+from visualpy.export import _read_asset, build_static_html
 from visualpy.models import AnalyzedProject, AnalyzedScript, ScriptConnection, Service, Step, Trigger
 
 
@@ -91,3 +93,18 @@ def test_export_business_view_has_no_raw_filename_headline():
     """A humanized title travels into the export, not the .py filename."""
     html = build_static_html(_project())
     assert "Fetch Leads" in html
+
+
+def test_read_asset_raises_friendly_error_when_missing(tmp_path):
+    """A missing bundled asset fails loudly with a reinstall hint, not silently."""
+    with pytest.raises(RuntimeError, match="reinstall"):
+        _read_asset(tmp_path / "does_not_exist.js")
+
+
+def test_read_asset_neutralizes_closing_script_tag(tmp_path):
+    """Inlined assets must not break out of their <script> host (any case)."""
+    asset = tmp_path / "evil.js"
+    asset.write_text('var a = "</script>"; var b = "</SCRIPT>";', encoding="utf-8")
+    out = _read_asset(asset)
+    assert "</script" not in out.lower()  # no raw closing tag survives
+    assert r"<\/script>" in out and r"<\/SCRIPT>" in out  # both escaped, case preserved

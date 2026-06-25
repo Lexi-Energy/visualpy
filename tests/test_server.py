@@ -7,6 +7,7 @@ from visualpy.analyzer.ast_parser import analyze_file
 from visualpy.analyzer.cross_file import resolve_connections
 from visualpy.analyzer.scanner import scan_project
 from visualpy.models import AnalyzedProject, AnalyzedScript, ScriptConnection, Step
+from visualpy.ratelimit import reset as reset_ratelimit
 from visualpy.server import create_app
 
 
@@ -512,7 +513,6 @@ async def test_script_view_has_four_flows():
 async def test_overview_has_business_graph():
     """Overview should contain both technical and business project graphs."""
     scripts = [AnalyzedScript(path="a.py"), AnalyzedScript(path="b.py")]
-    from visualpy.models import ScriptConnection
     connections = [ScriptConnection(source="a.py", target="b.py", type="import", detail="")]
     project = AnalyzedProject(path="/tmp", scripts=scripts, connections=connections)
     app = create_app(project)
@@ -528,12 +528,8 @@ async def test_translate_globals_registered():
     """Jinja2 globals for translate functions should be accessible."""
     project = AnalyzedProject(path="/tmp", scripts=[AnalyzedScript(path="a.py")])
     app = create_app(project)
-    # Check that the globals are registered in the template env
-    from visualpy.translate import BUSINESS_LABELS
-    # Access the templates through the app
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/")
-    # The overview page should render without errors (proves globals work)
     assert resp.status_code == 200
 
 
@@ -710,7 +706,6 @@ async def test_deduplicate_global_registered():
     """deduplicate_steps should be registered as a Jinja2 global."""
     project = AnalyzedProject(path="/tmp", scripts=[AnalyzedScript(path="a.py")])
     app = create_app(project)
-    # Accessing the Jinja env through the app routes
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.get("/")
     assert resp.status_code == 200
@@ -900,3 +895,109 @@ async def test_unhandled_error_renders_500_page(client, monkeypatch):
     assert resp.status_code == 500
     assert "500" in resp.text
     assert "went wrong" in resp.text.lower()
+
+
+@pytest.fixture
+def upload_app():
+    reset_ratelimit()
+    app = create_app()
+    yield app
+    reset_ratelimit()
+
+
+@pytest.mark.anyio
+async def test_no_project_shows_landing(upload_app):
+    async with AsyncClient(transport=ASGITransport(app=upload_app), base_url="http://test") as ac:
+        resp = await ac.get("/")
+    assert resp.status_code == 200
+    assert "drop-zone" in resp.text
+    assert "folder-input" in resp.text
+
+
+@pytest.mark.anyio
+async def test_landing_route_always_available(client):
+    async with AsyncClient(transport=ASGITransport(app=client), base_url="http://test") as ac:
+        resp = await ac.get("/landing")
+    assert resp.status_code == 200
+    assert "drop-zone" in resp.text
+
+
+@pytest.mark.anyio
+async def test_script_view_redirects_without_project(upload_app):
+    async with AsyncClient(transport=ASGITransport(app=upload_app), base_url="http://test", follow_redirects=False) as ac:
+        resp = await ac.get("/script/anything.py")
+    assert resp.status_code == 307
+
+
+@pytest.mark.anyio
+async def test_upload_no_files(upload_app):
+    async with AsyncClient(transport=ASGITransport(app=upload_app), base_url="http://test") as ac:
+        resp = await ac.post("/upload", files=[])
+    assert resp.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_upload_non_python_files(upload_app):
+    async with AsyncClient(transport=ASGITransport(app=upload_app), base_url="http://test") as ac:
+        resp = await ac.post("/upload", files=[
+            ("files", ("readme.txt", b"hello world", "text/plain")),
+        ])
+    assert resp.status_code == 400
+    assert "No Python files" in resp.json()["error"]
+
+
+@pytest.mark.anyio
+async def test_upload_python_file(upload_app, fixtures_dir):
+    hello = (fixtures_dir / "hello.py").read_bytes()
+    async with AsyncClient(transport=ASGITransport(app=upload_app), base_url="http://test") as ac:
+        resp = await ac.post("/upload", files=[
+            ("files", ("hello.py", hello, "text/x-python")),
+        ])
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert data["scripts"] >= 1
+
+
+@pytest.mark.anyio
+async def test_upload_then_overview(upload_app, fixtures_dir):
+    hello = (fixtures_dir / "hello.py").read_bytes()
+    async with AsyncClient(transport=ASGITransport(app=upload_app), base_url="http://test") as ac:
+        upload_resp = await ac.post("/upload", files=[
+            ("files", ("hello.py", hello, "text/x-python")),
+        ])
+        assert upload_resp.status_code == 200
+        resp = await ac.get("/")
+    assert resp.status_code == 200
+    assert "hello" in resp.text.lower()
+
+
+@pytest.mark.anyio
+async def test_upload_path_traversal_rejected(upload_app):
+    async with AsyncClient(transport=ASGITransport(app=upload_app), base_url="http://test") as ac:
+        resp = await ac.post("/upload", files=[
+            ("files", ("../../etc/passwd.py", b"import os", "text/x-python")),
+            ("files", ("safe.py", b"print('hi')", "text/x-python")),
+        ])
+    assert resp.status_code == 200
+    assert resp.json()["scripts"] >= 1
+
+
+@pytest.mark.anyio
+async def test_upload_subfolder_structure(upload_app, fixtures_dir):
+    hello = (fixtures_dir / "hello.py").read_bytes()
+    async with AsyncClient(transport=ASGITransport(app=upload_app), base_url="http://test") as ac:
+        resp = await ac.post("/upload", files=[
+            ("files", ("project/main.py", hello, "text/x-python")),
+            ("files", ("project/utils/helpers.py", b"def greet(): pass", "text/x-python")),
+        ])
+    assert resp.status_code == 200
+    assert resp.json()["scripts"] >= 1
+
+
+@pytest.mark.anyio
+async def test_nav_has_new_link(client):
+    async with AsyncClient(transport=ASGITransport(app=client), base_url="http://test") as ac:
+        resp = await ac.get("/")
+    assert "/landing" in resp.text
+    assert "+ New" in resp.text

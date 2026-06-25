@@ -4,6 +4,7 @@ import dataclasses
 import json
 import subprocess
 import sys
+import time
 
 import pytest
 
@@ -183,16 +184,23 @@ def test_from_json_missing_file():
     assert "Error" in result.stderr
 
 
-def test_serve_requires_path_or_from_json():
-    """serve with neither path nor --from-json should fail."""
-    result = subprocess.run(
-        [sys.executable, "-m", "visualpy", "serve"],
-        capture_output=True,
+def test_serve_without_path_starts_upload_mode():
+    """serve with neither path nor --from-json starts in upload mode."""
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "visualpy", "serve", "--port", "18199"],
+        stderr=subprocess.PIPE,
         text=True,
-        timeout=10,
     )
-    assert result.returncode != 0
-    assert "Error" in result.stderr or "required" in result.stderr.lower()
+    try:
+        time.sleep(2)
+        proc.terminate()
+        proc.wait(timeout=5)
+        stderr = proc.stderr.read() if proc.stderr else ""
+        assert "upload mode" in stderr.lower()
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
 
 
 def test_export_writes_self_contained_html(fixtures_dir, tmp_path):

@@ -20,11 +20,7 @@ env/
 *.swo
 
 # Project — session files (never committed)
-CLAUDE.md
-status.md
-DEFERRED.md
-docs/
-sprints/
+.maintainer-notes/
 
 # Secrets / runtime
 .env

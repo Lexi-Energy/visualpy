@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from visualpy.models import AnalyzedProject, AnalyzedScript, Step
 
-DEFAULT_MODEL = "gemini/gemini-2.5-flash"
+DEFAULT_MODEL = "openrouter/deepseek/deepseek-v4-flash:free"
 
 _SYSTEM_PROMPT = (
     "You are a technical writer who explains software to non-technical business "

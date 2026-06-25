@@ -94,13 +94,11 @@ def app():
         _run_export(args)
 
 
-def _build_project(target: Path) -> AnalyzedProject:
-    """Run the full analysis pipeline and return an AnalyzedProject."""
+def build_project(target: Path) -> AnalyzedProject | None:
+    """Run the analysis pipeline. Returns None if no Python files found."""
     scripts = scan_project(target)
-
     if not scripts:
-        print(f"[visualpy] No Python files found in: {target}", file=sys.stderr)
-        sys.exit(1)
+        return None
 
     project_root = target if target.is_dir() else target.parent
     connections = resolve_connections(scripts, project_root)
@@ -124,6 +122,14 @@ def _build_project(target: Path) -> AnalyzedProject:
         secrets=sorted(all_secrets),
         entry_points=sorted(entry_points),
     )
+
+
+def _build_project(target: Path) -> AnalyzedProject:
+    project = build_project(target)
+    if project is None:
+        print(f"[visualpy] No Python files found in: {target}", file=sys.stderr)
+        sys.exit(1)
+    return project
 
 
 def _summarize_project(project: AnalyzedProject) -> None:
@@ -285,8 +291,13 @@ def _run_serve(args: argparse.Namespace) -> None:
 
     from visualpy.server import create_app
 
-    project = _load_project(args)
-    app = create_app(project)
+    if args.from_json or args.path:
+        project = _load_project(args)
+        app = create_app(project)
+    else:
+        print("[visualpy] No path given — starting in upload mode", file=sys.stderr)
+        app = create_app()
+
     print(f"[visualpy] Serving at http://{args.host}:{args.port}", file=sys.stderr)
     try:
         uvicorn.run(app, host=args.host, port=args.port, log_level="warning")

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}visualpy — Upload{% endblock %}
+
+{% block content %}
+<div class="flex flex-col items-center justify-center min-h-[70vh] px-4">
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold mb-2">visualpy</h1>
+        <p class="text-gray-500 dark:text-gray-400 text-sm max-w-md">
+            Drop a folder of Python scripts to see what they do, how they connect, and what they need.
+        </p>
+    </div>
+
+    <div id="drop-zone"
+         class="w-full max-w-xl border-2 border-dashed border-gray-300 dark:border-gray-600
+                rounded-2xl p-12 text-center cursor-pointer
+                transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500
+                hover:bg-gray-50 dark:hover:bg-gray-800/50">
+        <div class="mb-4">
+            <svg class="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+        </div>
+        <p class="text-gray-600 dark:text-gray-300 font-medium mb-1">
+            Drag & drop a folder here
+        </p>
+        <p class="text-gray-400 dark:text-gray-500 text-sm mb-4">
+            or click to browse
+        </p>
+        <input id="folder-input" type="file" webkitdirectory multiple class="hidden">
+        <button onclick="document.getElementById('folder-input').click()"
+                class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
+            Choose Folder
+        </button>
+    </div>
+
+    <p id="upload-status" class="mt-4 text-sm text-blue-600 dark:text-blue-400 font-medium"></p>
+    <p id="upload-error" class="mt-2 text-sm text-red-600 dark:text-red-400"></p>
+
+    <p class="mt-8 text-xs text-gray-400 dark:text-gray-600 max-w-md text-center">
+        Your scripts are analyzed locally on this server using Python's AST module.
+        No code is executed. Only <code>.py</code> files are read.
+    </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/upload.js"></script>
+{% endblock %}

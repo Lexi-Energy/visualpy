@@ -59,9 +59,7 @@
         <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">Click a script to see its flow</p>
         <script id="graph-tech" type="text/plain">{{ graph }}</script>
         <div class="overflow-x-auto">
-            <pre class="mermaid">
-{{ graph }}
-            </pre>
+            <pre class="mermaid-deferred" id="mermaid-graph-tech"></pre>
         </div>
         <div class="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700">
             <div class="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">

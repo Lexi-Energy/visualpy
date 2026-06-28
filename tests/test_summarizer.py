@@ -217,7 +217,7 @@ class TestGracefulDegradation:
         mock_llm.return_value = "summary"
         with patch.dict("os.environ", {}, clear=True):
             summarize_script(sample_script)
-        assert "deepseek" in mock_llm.call_args[0][1]
+        assert "groq" in mock_llm.call_args[0][1]
 
 
 class TestCallLlm:

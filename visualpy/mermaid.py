@@ -8,7 +8,7 @@ import sys
 from collections import Counter
 from pathlib import PurePosixPath
 
-from visualpy.models import AnalyzedProject, AnalyzedScript, Step
+from visualpy.models import AnalyzedProject, AnalyzedScript, Step, STEP_TYPE_STYLES
 from visualpy.translate import (
     BUSINESS_LABELS,
     PHASE_LABELS,
@@ -50,15 +50,20 @@ _STEP_CLASS: dict[str, str] = {
 }
 
 # Mermaid classDef declarations — appended to every graph.
-_CLASS_DEFS = """\
-classDef api fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
-classDef fileio fill:#dcfce7,stroke:#16a34a,color:#14532d
-classDef dbop fill:#f3e8ff,stroke:#9333ea,color:#3b0764
-classDef decision fill:#ffedd5,stroke:#ea580c,color:#7c2d12
-classDef output fill:#f3f4f6,stroke:#6b7280,color:#1f2937
-classDef transform fill:#ccfbf1,stroke:#0d9488,color:#134e4a
-classDef entry fill:#dcfce7,stroke:#16a34a,stroke-width:3px,color:#14532d
-classDef compact fill:#f0f4ff,stroke:#6366f1,color:#312e81,stroke-width:2px"""
+_CLASS_DEFS = (
+    "\n".join(
+        f'classDef {cls} fill:{fill},stroke:{s["hex"]},color:{text}'
+        for cls, fill, text, s in [
+            ("api",      "#dbeafe", "#1e3a5f", STEP_TYPE_STYLES["api_call"]),
+            ("fileio",   "#dcfce7", "#14532d", STEP_TYPE_STYLES["file_io"]),
+            ("dbop",     "#f3e8ff", "#3b0764", STEP_TYPE_STYLES["db_op"]),
+            ("decision", "#ffedd5", "#7c2d12", STEP_TYPE_STYLES["decision"]),
+            ("output",   "#f3f4f6", "#1f2937", STEP_TYPE_STYLES["output"]),
+            ("transform","#ccfbf1", "#134e4a", STEP_TYPE_STYLES["transform"]),
+        ]
+    )
+    + "\nclassDef entry fill:#dcfce7,stroke:#16a34a,stroke-width:3px,color:#14532d\nclassDef compact fill:#f0f4ff,stroke:#6366f1,color:#312e81,stroke-width:2px"
+)
 
 _SPECIAL_CHARS = re.compile(r"[^a-zA-Z0-9_]")
 _WARNED_TYPES: set[str] = set()

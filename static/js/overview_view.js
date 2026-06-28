@@ -12,23 +12,12 @@
             var src = document.getElementById('graph-tech');
             var el = document.querySelector('#tech-graph-container .mermaid');
             if (src && el) {
-                if (el.dataset.rendering === '1') return;  // guard against concurrent run() on rapid toggle
-                el.dataset.rendering = '1';
-                var code = src.textContent.trim();
-                el.setAttribute('data-mermaid-src', code);
-                el.removeAttribute('data-processed');
-                el.innerHTML = code;
-                try { await window.mermaidModule.run({ nodes: [el] }); }
-                catch (err) {
-                    console.error('[visualpy] Mermaid re-render failed:', err);
-                    el.innerHTML = '<p class="text-sm text-red-600 dark:text-red-400">Diagram failed to render. Try refreshing the page.</p>';
-                }
-                finally { delete el.dataset.rendering; }
+                await window.renderMermaidElement(el, src.textContent.trim());
             }
         }
     }
 
-    // Render collapsed mermaid graphs the first time their <details> opens.
+    // Render mermaid graphs the first time they become visible.
     document.addEventListener('toggle', function (e) {
         if (!e.target.querySelector || !e.target.open) return;
         var el = e.target.querySelector('.mermaid-deferred') || e.target.querySelector('.mermaid');
@@ -37,17 +26,7 @@
         if (!src) return;
 
         function doRender() {
-            if (el.dataset.rendering === '1') return;  // a second toggle listener may also fire
-            el.dataset.rendering = '1';
-            var code = src.textContent.trim();
-            el.className = 'mermaid';
-            el.setAttribute('data-mermaid-src', code);
-            el.removeAttribute('data-processed');
-            el.innerHTML = code;
-            window.mermaidModule.run({ nodes: [el] }).catch(function (err) {
-                console.error('[visualpy] Mermaid render failed:', err);
-                el.innerHTML = '<p class="text-sm text-red-600 dark:text-red-400">Diagram failed to render. Try refreshing the page.</p>';
-            }).finally(function () { delete el.dataset.rendering; });
+            window.renderMermaidElement(el, src.textContent.trim());
         }
 
         if (window.mermaidModule) {
@@ -60,15 +39,19 @@
             setTimeout(function () {
                 clearInterval(retry);
                 if (!el.querySelector('svg')) {
-                    el.innerHTML = '<p class="text-sm text-gray-400 dark:text-gray-500">Diagram library could not load. Check your connection and refresh.</p>';
+                    el.innerHTML = '<p class="text-sm text-gray-400 dark:text-gray-500">Diagram library could not load.</p>';
                 }
             }, 5000);
         }
     }, true);
 
     function initOverviewView() {
-        // The visible technical graph is rendered by the page's Mermaid bootstrap;
-        // collapsed/business graphs render lazily via the toggle listener above.
+        // Render the visible business graph if it's the active view.
+        var el = document.querySelector('#graph-biz-container .mermaid-deferred');
+        if (el && !el.querySelector('svg')) {
+            var src = document.getElementById('graph-biz-collapsed');
+            if (src) window.renderMermaidElement(el, src.textContent.trim());
+        }
     }
 
     window.VisualPyOverview = { init: initOverviewView, refreshView: refreshView };

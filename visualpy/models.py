@@ -2,7 +2,19 @@
 
 from __future__ import annotations
 
+
 from dataclasses import dataclass, field
+from typing import Literal
+StepType = Literal["api_call", "file_io", "db_op", "decision", "output", "transform"]
+
+STEP_TYPE_STYLES: dict[str, dict[str, str]] = {
+    "api_call":  {"tailwind": "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200",   "border": "border-blue-500",  "hex": "#3B82F6"},
+    "file_io":   {"tailwind": "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200", "border": "border-green-600", "hex": "#22C55E"},
+    "db_op":     {"tailwind": "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200","border": "border-purple-500","hex": "#A855F7"},
+    "decision":  {"tailwind": "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200","border": "border-orange-500","hex": "#F97316"},
+    "output":    {"tailwind": "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200",     "border": "border-gray-400",  "hex": "#6B7280"},
+    "transform": {"tailwind": "bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200",     "border": "border-teal-500",  "hex": "#14B8A6"},
+}
 
 
 @dataclass
@@ -76,3 +88,15 @@ class AnalyzedProject:
     secrets: list[str] = field(default_factory=list)
     entry_points: list[str] = field(default_factory=list)
     summary: str | None = None  # LLM-generated executive summary
+    sovereignty: SovereigntyReport | None = None
+
+
+@dataclass
+class SovereigntyReport:
+    """What data leaves the machine, which services receive it, and which credentials are involved."""
+
+    verdict: str  # "local" | "external" | "mixed"
+    external_services: list[dict]  # [{"service": "Google Sheets", "scripts": [...], "credential": "GOOGLE_API_KEY"}]
+    local_operations: list[str]  # ["File reads/writes", "Local data transforms"]
+    credentials_used: list[dict]  # [{"secret": "GOOGLE_API_KEY", "used_by": [...], "transmitted_to": [...]}]
+    data_egress_count: int

@@ -1,46 +1,72 @@
 {% extends "base.html" %}
 
-{% block title %}visualpy — Upload{% endblock %}
+{% block title %}visualpy — See what Python automations actually do{% endblock %}
 
 {% block content %}
-<div class="flex flex-col items-center justify-center min-h-[70vh] px-4">
-    <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold mb-2">visualpy</h1>
-        <p class="text-gray-500 dark:text-gray-400 text-sm max-w-md">
-            Drop a folder of Python scripts to see what they do, how they connect, and what they need.
+<div class="flex flex-col items-center justify-center min-h-[80vh] px-4">
+    <!-- Hero -->
+    <div class="text-center max-w-2xl mb-8">
+        <h1 class="text-4xl font-bold mb-3 leading-tight">
+            See what Python automations actually do.
+        </h1>
+        <p class="text-gray-500 dark:text-gray-400 text-base max-w-lg mx-auto leading-relaxed">
+            Drop a folder of scripts, get a visual breakdown.
+            No execution, no config.
         </p>
     </div>
 
-    <div id="drop-zone"
-         class="w-full max-w-xl border-2 border-dashed border-gray-300 dark:border-gray-600
-                rounded-2xl p-12 text-center cursor-pointer
-                transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500
-                hover:bg-gray-50 dark:hover:bg-gray-800/50">
-        <div class="mb-4">
-            <svg class="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-            </svg>
+    <!-- Preview visual -->
+    <div class="mb-10 max-w-2xl w-full rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <img src="/static/img/overview-preview.svg"
+             alt="visualpy overview showing data journey, phase pipeline, script cards, and credential panel"
+             class="w-full">
+    </div>
+
+    <!-- Actions row -->
+    <div class="flex flex-col sm:flex-row items-center gap-4 mb-6">
+        <div id="drop-zone"
+             class="w-72 border-2 border-dashed border-gray-300 dark:border-gray-600
+                    rounded-2xl p-6 text-center cursor-pointer
+                    transition-all duration-200 hover:border-blue-400 dark:hover:border-blue-500
+                    hover:bg-gray-50 dark:hover:bg-gray-800/50">
+            <div class="mb-3">
+                <svg class="w-10 h-10 mx-auto text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+            </div>
+            <p class="text-gray-600 dark:text-gray-300 font-medium mb-1 text-sm">
+                Drag & drop a folder
+            </p>
+            <p class="text-gray-400 dark:text-gray-500 text-xs mb-3">
+                or click to browse
+            </p>
+            <input id="folder-input" type="file" webkitdirectory multiple class="hidden">
+            <button onclick="document.getElementById('folder-input').click()"
+                    class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
+                Choose Folder
+            </button>
         </div>
-        <p class="text-gray-600 dark:text-gray-300 font-medium mb-1">
-            Drag & drop a folder here
-        </p>
-        <p class="text-gray-400 dark:text-gray-500 text-sm mb-4">
-            or click to browse
-        </p>
-        <input id="folder-input" type="file" webkitdirectory multiple class="hidden">
-        <button onclick="document.getElementById('folder-input').click()"
-                class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
-            Choose Folder
-        </button>
+
+        <div class="text-gray-300 dark:text-gray-600 text-lg hidden sm:block">or</div>
+
+        <a href="/demo"
+           class="w-72 inline-flex flex-col items-center justify-center px-6 py-6 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition shadow-sm">
+            <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="font-medium text-sm">Try the Demo</span>
+            <span class="text-xs text-indigo-200 mt-1">10-script project, no upload needed</span>
+        </a>
     </div>
 
-    <p id="upload-status" class="mt-4 text-sm text-blue-600 dark:text-blue-400 font-medium"></p>
-    <p id="upload-error" class="mt-2 text-sm text-red-600 dark:text-red-400"></p>
+    <p id="upload-status" class="text-sm text-blue-600 dark:text-blue-400 font-medium"></p>
+    <p id="upload-error" class="text-sm text-red-600 dark:text-red-400"></p>
 
-    <p class="mt-8 text-xs text-gray-400 dark:text-gray-600 max-w-md text-center">
-        Your scripts are analyzed locally on this server using Python's AST module.
-        No code is executed. Only <code>.py</code> files are read.
+    <p class="mt-6 text-xs text-gray-400 dark:text-gray-600 max-w-md text-center leading-relaxed">
+        Your scripts stay local. No code is executed.
+        Only <code>.py</code> files are read.
     </p>
 </div>
 {% endblock %}

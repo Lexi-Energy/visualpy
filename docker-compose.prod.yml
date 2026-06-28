@@ -1,0 +1,13 @@
+services:
+  visualpy:
+    build:
+      context: .
+    container_name: visualpy
+    restart: always
+    networks:
+      - caddy_net
+
+networks:
+  caddy_net:
+    external: true
+    name: caddy_net

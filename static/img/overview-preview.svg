@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <!-- Background -->
+  <rect width="640" height="360" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5"/>
+  <!-- Data journey header -->
+  <rect x="24" y="16" width="592" height="32" rx="6" fill="#DBEAFE"/>
+  <text x="40" y="36" font-family="monospace" font-size="11" fill="#1E40AF">Script 1: Reads leads from Google Sheets → enriches via AnyMailFinder → updates sheet</text>
+  <!-- Phase pipeline row -->
+  <rect x="24" y="60" width="100" height="48" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="74" y="88" font-family="sans-serif" font-size="11" fill="#1E3A5F" text-anchor="middle" font-weight="600">Setup</text>
+  <text x="40" y="100" font-family="sans-serif" font-size="8" fill="#64748B">3 steps</text>
+  <path d="M128 84 L136 84 M140 84 L148 84" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round"/>
+  <rect x="152" y="60" width="100" height="48" rx="8" fill="#CCFBF1" stroke="#0D9488" stroke-width="1.5"/>
+  <text x="202" y="88" font-family="sans-serif" font-size="11" fill="#134E4A" text-anchor="middle" font-weight="600">Processing</text>
+  <text x="168" y="100" font-family="sans-serif" font-size="8" fill="#64748B">12 steps</text>
+  <path d="M256 84 L264 84 M268 84 L276 84" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round"/>
+  <rect x="280" y="60" width="100" height="48" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="330" y="88" font-family="sans-serif" font-size="11" fill="#14532D" text-anchor="middle" font-weight="600">Storage</text>
+  <text x="296" y="100" font-family="sans-serif" font-size="8" fill="#64748B">2 steps</text>
+  <path d="M384 84 L392 84 M396 84 L404 84" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round"/>
+  <rect x="408" y="60" width="100" height="48" rx="8" fill="#FFF7ED" stroke="#EA580C" stroke-width="1.5"/>
+  <text x="458" y="88" font-family="sans-serif" font-size="11" fill="#7C2D12" text-anchor="middle" font-weight="600">Error Handl.</text>
+  <text x="424" y="100" font-family="sans-serif" font-size="8" fill="#64748B">1 step</text>
+  <path d="M512 84 L520 84 M524 84 L532 84" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round"/>
+  <rect x="536" y="60" width="80" height="48" rx="8" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="576" y="88" font-family="sans-serif" font-size="11" fill="#1F2937" text-anchor="middle" font-weight="600">Reporting</text>
+  <text x="548" y="100" font-family="sans-serif" font-size="8" fill="#64748B">5 steps</text>
+  <!-- Script cards row -->
+  <rect x="24" y="124" width="192" height="80" rx="8" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="36" y="136" width="60" height="16" rx="4" fill="#DBEAFE"/>
+  <text x="42" y="147" font-family="sans-serif" font-size="9" fill="#1E40AF" font-weight="500">external</text>
+  <text x="104" y="147" font-family="sans-serif" font-size="11" fill="#1E293B" font-weight="600">gmaps_lead_pipeline.py</text>
+  <text x="36" y="168" font-family="sans-serif" font-size="10" fill="#64748B">Searches Google Maps for leads based on</text>
+  <text x="36" y="182" font-family="sans-serif" font-size="10" fill="#64748B">business category and location.</text>
+  <rect x="36" y="190" width="14" height="14" rx="4" fill="#EFF6FF"/><rect x="38" y="194" width="10" height="6" rx="1" fill="#3B82F6"/>
+  <rect x="232" y="124" width="192" height="80" rx="8" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="244" y="136" width="40" height="16" rx="4" fill="#FEF3C7"/>
+  <text x="250" y="147" font-family="sans-serif" font-size="9" fill="#92400E" font-weight="500">cron</text>
+  <text x="292" y="147" font-family="sans-serif" font-size="11" fill="#1E293B" font-weight="600">scrape_google_maps.py</text>
+  <text x="244" y="168" font-family="sans-serif" font-size="10" fill="#64748B">Runs search on Google Maps through the</text>
+  <text x="244" y="182" font-family="sans-serif" font-size="10" fill="#64748B">official API and stores raw results.</text>
+  <rect x="244" y="190" width="14" height="14" rx="4" fill="#EFF6FF"/><rect x="246" y="194" width="10" height="6" rx="1" fill="#3B82F6"/>
+  <rect x="440" y="124" width="176" height="80" rx="8" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="452" y="147" font-family="sans-serif" font-size="11" fill="#1E293B" font-weight="600">enrich_emails.py</text>
+  <text x="452" y="166" font-family="sans-serif" font-size="10" fill="#64748B">Enriches leads with email</text>
+  <text x="452" y="180" font-family="sans-serif" font-size="10" fill="#64748B">data via AnyMailFinder.</text>
+  <rect x="452" y="190" width="14" height="14" rx="4" fill="#EFF6FF"/><rect x="454" y="194" width="10" height="6" rx="1" fill="#3B82F6"/>
+  <!-- Services + credentials panel -->
+  <rect x="24" y="218" width="296" height="60" rx="8" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="36" y="240" font-family="sans-serif" font-size="12" fill="#1E293B" font-weight="600">Services</text>
+  <rect x="36" y="248" width="60" height="18" rx="4" fill="#EFF6FF"/><text x="44" y="260" font-family="sans-serif" font-size="9" fill="#1D4ED8">Google Sheets</text>
+  <rect x="104" y="248" width="48" height="18" rx="4" fill="#EFF6FF"/><text x="112" y="260" font-family="sans-serif" font-size="9" fill="#1D4ED8">Google Maps</text>
+  <rect x="160" y="248" width="74" height="18" rx="4" fill="#EFF6FF"/><text x="168" y="260" font-family="sans-serif" font-size="9" fill="#1D4ED8">AnyMailFinder</text>
+  <rect x="242" y="248" width="60" height="18" rx="4" fill="#EFF6FF"/><text x="250" y="260" font-family="sans-serif" font-size="9" fill="#1D4ED8">PandaDoc</text>
+  <rect x="336" y="218" width="280" height="60" rx="8" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="348" y="240" font-family="sans-serif" font-size="12" fill="#1E293B" font-weight="600">Credentials</text>
+  <rect x="348" y="248" width="100" height="18" rx="4" fill="#FEF3C7"/><text x="356" y="260" font-family="sans-serif" font-size="9" fill="#92400E">GOOGLE_API_KEY</text>
+  <rect x="456" y="248" width="80" height="18" rx="4" fill="#FEF3C7"/><text x="464" y="260" font-family="sans-serif" font-size="9" fill="#92400E">SERPAPI_KEY</text>
+  <rect x="544" y="248" width="52" height="18" rx="4" fill="#FEF3C7"/><text x="552" y="260" font-family="sans-serif" font-size="9" fill="#92400E">8 more</text>
+  <!-- Sovereignty badge -->
+  <rect x="24" y="292" width="592" height="28" rx="6" fill="#F0F9FF"/>
+  <circle cx="40" cy="306" r="4" fill="#22C55E"/>
+  <text x="52" y="310" font-family="sans-serif" font-size="10" fill="#0C4A6E">3 external services · 8 credentials detected · data leaves machine to Google Sheets, AnyMailFinder, PandaDoc</text>
+  <!-- Step detail -->
+  <rect x="24" y="330" width="592" height="18" rx="6" fill="#FAFAFA"/>
+  <rect x="36" y="334" width="72" height="10" rx="3" fill="#DBEAFE" stroke="#2563EB" stroke-width="0.5"/>
+  <text x="42" y="342" font-family="sans-serif" font-size="8" fill="#1E3A5F">External Service</text>
+  <text x="116" y="342" font-family="sans-serif" font-size="9" fill="#334155">Fetches business listings from Google Maps API based on category &amp; location</text>
+  <text x="492" y="342" font-family="monospace" font-size="8" fill="#94A3B8">L23 service: Google Maps</text>
+</svg>

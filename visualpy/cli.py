@@ -16,6 +16,7 @@ from visualpy.models import (
     Service,
     Step,
     Trigger,
+    SovereigntyReport,
 )
 
 
@@ -114,7 +115,7 @@ def build_project(target: Path) -> AnalyzedProject | None:
         if script.is_entry_point:
             entry_points.append(script.path)
 
-    return AnalyzedProject(
+    project = AnalyzedProject(
         path=str(target),
         scripts=scripts,
         connections=connections,
@@ -122,6 +123,9 @@ def build_project(target: Path) -> AnalyzedProject | None:
         secrets=sorted(all_secrets),
         entry_points=sorted(entry_points),
     )
+    from visualpy.sovereignty import compute_sovereignty_report
+    project.sovereignty = compute_sovereignty_report(project)
+    return project
 
 
 def _build_project(target: Path) -> AnalyzedProject:
@@ -217,7 +221,7 @@ def _project_from_dict(data: dict) -> AnalyzedProject:
                 data_flow=s.get("data_flow"),
             )
         )
-    return AnalyzedProject(
+    project = AnalyzedProject(
         path=data["path"],
         scripts=scripts,
         connections=[ScriptConnection(**c) for c in data.get("connections", [])],
@@ -226,6 +230,10 @@ def _project_from_dict(data: dict) -> AnalyzedProject:
         entry_points=data.get("entry_points", []),
         summary=data.get("summary"),
     )
+    sr_data = data.get("sovereignty")
+    if sr_data:
+        project.sovereignty = SovereigntyReport(**sr_data)
+    return project
 
 
 def _load_project(args: argparse.Namespace) -> AnalyzedProject:

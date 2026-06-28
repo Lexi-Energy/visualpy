@@ -90,6 +90,17 @@ def create_app(project: AnalyzedProject | None = None) -> FastAPI:
     async def landing(request: Request):
         return templates.TemplateResponse(request, "landing.html", context={})
 
+    @app.get("/demo")
+    async def load_demo(request: Request):
+        from visualpy.demo_data import load_demo_project
+        project = load_demo_project()
+        if project is None:
+            return templates.TemplateResponse(
+                request, "error.html", context={"code": 500, "message": "Demo data could not be loaded."}
+            )
+        _set_project(app, project)
+        return RedirectResponse(url="/")
+
     @app.get("/health")
     async def health():
         return JSONResponse({"status": "ok"})

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from visualpy.models import AnalyzedProject, AnalyzedScript, Step
 
-DEFAULT_MODEL = "openrouter/deepseek/deepseek-v4-flash:free"
+DEFAULT_MODEL = "groq/llama-3.3-70b-versatile"
 
 _SYSTEM_PROMPT = (
     "You are a technical writer who explains software to non-technical business "
@@ -391,5 +391,5 @@ def _call_llm(messages: list[dict], model: str) -> str | None:
             return None
         return content.strip()
     except Exception as exc:
-        print(f"[visualpy] Warning: LLM call failed: {exc}", file=sys.stderr)
+        print(f"[visualpy] Warning: LLM call failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         return None

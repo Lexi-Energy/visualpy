@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from visualpy.models import Step, Trigger
 
 if TYPE_CHECKING:
-    from visualpy.models import AnalyzedScript
+    from visualpy.models import AnalyzedProject, AnalyzedScript
 
 # --- Type labels -----------------------------------------------------------
 
@@ -604,6 +604,18 @@ def data_flow_fallback(script: "AnalyzedScript") -> str:
         )
         return ""
 
+
+
+def aggregate_data_flow(project: "AnalyzedProject") -> str:
+    """One-line summary per script showing each script's data journey."""
+    seen: set[str] = set()
+    parts: list[str] = []
+    for script in project.scripts:
+        flow = data_flow_fallback(script)
+        if flow and flow not in seen:
+            seen.add(flow)
+            parts.append(f"{humanize_filename(script.path)}: {flow}")
+    return "\n".join(parts)
 
 def _data_flow_fallback_inner(script: "AnalyzedScript") -> str:
     steps = script.steps

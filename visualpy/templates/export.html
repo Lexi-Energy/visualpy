@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" x-data="{ dark: localStorage.getItem('theme') === 'dark', viewMode: localStorage.getItem('viewMode') || 'business' }"
-      x-init="$watch('dark', v => { localStorage.setItem('theme', v ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', v); window.reRenderMermaid && window.reRenderMermaid(v) }); $watch('viewMode', v => { localStorage.setItem('viewMode', v); window.switchViewMode && window.switchViewMode(v === 'business') }); document.documentElement.classList.toggle('dark', dark)"
+      x-init="$watch('dark', v => { localStorage.setItem('theme', v ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', v); window.reRenderMermaid && window.reRenderMermaid(v) }); $watch('viewMode', v => { localStorage.setItem('viewMode', v); window.switchViewMode && window.switchViewMode(window.isBusinessView()) }); document.documentElement.classList.toggle('dark', dark)"
       :class="{ 'dark': dark }">
 <head>
     <meta charset="UTF-8">
@@ -15,19 +15,20 @@
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
     <nav class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-3">
+            <div x-show="viewMode !== 'presentation'" class="flex items-center gap-3">
                 <a href="#" onclick="showOverview(); return false;" class="flex items-center gap-1.5 text-lg font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                     <span aria-hidden="true">&larr;</span>
                     <span>visualpy</span>
                 </a>
             </div>
             <div class="flex items-center gap-2">
-                <button @click="viewMode = viewMode === 'business' ? 'technical' : 'business'"
+                <button @click="viewMode = viewMode === 'presentation' ? 'business' : viewMode === 'business' ? 'technical' : 'business'"
                         class="px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200"
                         :class="viewMode === 'business' ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-300 shadow-sm' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400'"
                         :title="viewMode === 'business' ? 'Switch to technical view' : 'Switch to business view'">
                     <span x-show="viewMode === 'business'" class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg> Code</span>
                     <span x-show="viewMode === 'technical'" class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg> Simple</span>
+                    <span x-show="viewMode === 'presentation'" class="flex items-center gap-1">Exit Presentation</span>
                 </button>
                 <button @click="dark = !dark"
                         class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
@@ -40,7 +41,7 @@
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 py-6">
+    <main class="max-w-7xl mx-auto px-4 py-6" :class="viewMode === 'presentation' ? 'max-w-5xl mx-auto px-8 py-12 text-lg' : 'max-w-7xl mx-auto px-4 py-6'">
         <section id="view-overview">
             {% include "partials/overview_body.html" %}
         </section>
@@ -60,5 +61,6 @@
     <script>{{ script_view_js|safe }}</script>
     <script>{{ overview_view_js|safe }}</script>
     <script>{{ export_controller_js|safe }}</script>
+    <script>(function(){'use strict';document.addEventListener('keydown',function(e){if(window.getViewMode()!=='presentation')return;if(e.key==='Escape'){localStorage.setItem('viewMode','business');window.location.reload();return;}var phases=document.querySelectorAll('#script-view-root>div:first-child details');if(!phases.length)return;var openIdx=Array.from(phases).findIndex(function(d){return d.open;});if(e.key==='ArrowRight'||e.key==='ArrowDown'){phases.forEach(function(d){d.removeAttribute('open');});var next=phases[Math.min(openIdx+1,phases.length-1)];next.setAttribute('open','');next.scrollIntoView({behavior:'smooth',block:'start'});}else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){phases.forEach(function(d){d.removeAttribute('open');});var prev=phases[Math.max(openIdx-1,0)];prev.setAttribute('open','');prev.scrollIntoView({behavior:'smooth',block:'start'});}});})();</script>
 </body>
 </html>

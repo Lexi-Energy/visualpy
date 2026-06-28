@@ -31,7 +31,7 @@ visualpy = "visualpy.__main__:main"
 include = ["visualpy*"]
 
 [tool.setuptools.package-data]
-visualpy = ["templates/**/*.html"]
+visualpy = ["templates/**/*.html", "demo/*.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

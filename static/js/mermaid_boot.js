@@ -1,3 +1,28 @@
+window.getViewMode = function () {
+    return localStorage.getItem('viewMode') || 'business';
+};
+window.isBusinessView = function () {
+    return getViewMode() !== 'technical';
+};
+
+window.renderMermaidElement = async function (el, code) {
+    if (!window.mermaidModule || !el || !code) return;
+    if (el.dataset.rendering === '1') return;
+    el.dataset.rendering = '1';
+    if (el.classList.contains('mermaid-deferred')) el.className = 'mermaid';
+    el.setAttribute('data-mermaid-src', code);
+    el.removeAttribute('data-processed');
+    el.innerHTML = code;
+    try {
+        await window.mermaidModule.run({ nodes: [el] });
+    } catch (err) {
+        console.error('[visualpy] Mermaid render failed:', err);
+        el.innerHTML = '<p class="text-sm text-red-600 dark:text-red-400">Diagram failed to render.</p>';
+    } finally {
+        delete el.dataset.rendering;
+    }
+};
+
 // Mermaid bootstrap, shared by the live server and the static export.
 // Expects the Mermaid UMD bundle to have already defined window.mermaid.
 (function () {

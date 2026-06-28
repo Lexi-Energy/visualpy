@@ -14,13 +14,14 @@ from pathlib import Path
 from jinja2 import Environment
 
 from visualpy.mermaid import importance_score, pedagogical_flow, project_graph, script_flow
-from visualpy.models import AnalyzedProject, AnalyzedScript
+from visualpy.models import AnalyzedProject, AnalyzedScript, STEP_TYPE_STYLES
 from visualpy.translate import (
     BUSINESS_LABELS,
     PHASE_LABELS,
     TECHNICAL_LABELS,
     TECHNICAL_LABELS_SHORT,
     compute_health,
+    aggregate_data_flow,
     data_flow_fallback,
     deduplicate_steps,
     detect_antipatterns,
@@ -51,6 +52,7 @@ def register_globals(env: Environment) -> None:
         translate_secret=translate_secret,
         translate_connection=translate_connection,
         humanize_filename=humanize_filename,
+        aggregate_data_flow=aggregate_data_flow,
         data_flow_fallback=data_flow_fallback,
         infer_phase=infer_phase,
         group_steps_by_phase=group_steps_by_phase,
@@ -58,6 +60,7 @@ def register_globals(env: Environment) -> None:
         explain_pattern=explain_pattern,
         detect_antipatterns=detect_antipatterns,
         compute_health=compute_health,
+        step_type_styles=STEP_TYPE_STYLES,
     )
 
 

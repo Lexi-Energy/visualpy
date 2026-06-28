@@ -7,13 +7,13 @@
     window.STEP_DETAILS = window.STEP_DETAILS || {};
     var _openStepKey = null;
     var _flowIsCompact = false;
-    var _flowIsBusiness = localStorage.getItem('viewMode') !== 'technical';
+    var _flowIsBusiness = window.isBusinessView();
 
     function _injectStepDetail() {
         if (!_openStepKey) return;
         var entry = window.STEP_DETAILS[_openStepKey];
         if (!entry) return;
-        var isBiz = localStorage.getItem('viewMode') !== 'technical';
+        var isBiz = window.isBusinessView();
         var content = document.getElementById(isBiz ? 'step-detail-content-biz' : 'step-detail-content')
             || document.getElementById('step-detail-content-biz')
             || document.getElementById('step-detail-content');
@@ -22,7 +22,7 @@
 
     window.showStepDetail = function (scriptPath, line) {
         _openStepKey = scriptPath + '::' + line;
-        var isBiz = localStorage.getItem('viewMode') !== 'technical';
+        var isBiz = window.isBusinessView();
         var panelId = isBiz ? 'step-detail-biz' : 'step-detail';
         var content = document.getElementById(isBiz ? 'step-detail-content-biz' : 'step-detail-content');
         if (!content) {
@@ -45,22 +45,7 @@
     }
 
     async function _renderMermaidElement(el, code) {
-        if (!window.mermaidModule) { console.warn('[visualpy] Mermaid not loaded yet'); return; }
-        if (!el || !code) return;
-        if (el.dataset.rendering === '1') return;  // guard against concurrent run() on one node
-        el.dataset.rendering = '1';
-        if (el.classList.contains('mermaid-deferred')) el.className = 'mermaid';
-        el.setAttribute('data-mermaid-src', code);
-        el.removeAttribute('data-processed');
-        el.innerHTML = code;
-        try {
-            await window.mermaidModule.run({ nodes: [el] });
-        } catch (err) {
-            console.error('[visualpy] Mermaid re-render failed:', err);
-            el.innerHTML = '<p class="text-sm text-red-600 dark:text-red-400">Diagram failed to render. Try refreshing the page.</p>';
-        } finally {
-            delete el.dataset.rendering;
-        }
+        await window.renderMermaidElement(el, code);
     }
 
     async function _renderCurrentFlow() {
@@ -98,7 +83,7 @@
             var el = e.target.querySelector('#mermaid-tech-collapsed') || e.target.querySelector('.mermaid-deferred');
             if (el && !el.querySelector('svg')) {
                 var src = document.getElementById('flow-tech-collapsed');
-                if (src) _renderMermaidElement(el, src.textContent.trim()).catch(function (err) {
+                if (src) window.renderMermaidElement(el, src.textContent.trim()).catch(function (err) {
                     console.error('[visualpy] Collapsed tech diagram render failed:', err);
                 });
             }
@@ -108,7 +93,7 @@
     // (Re)initialise rendering for the script body currently in the DOM.
     function initScriptView() {
         _openStepKey = null;
-        _flowIsBusiness = localStorage.getItem('viewMode') !== 'technical';
+        _flowIsBusiness = window.isBusinessView();
         var root = document.getElementById('script-view-root');
         _flowIsCompact = !!(root && root.dataset.defaultCompact === 'true');
         var btn = document.getElementById('flow-toggle');

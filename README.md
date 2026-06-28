@@ -55,6 +55,25 @@ visualpy reads your Python files using static analysis (the `ast` module). It ne
 
 The result is a structured project map, viewable as JSON or as an interactive web UI with dependency graphs and per-script flow diagrams.
 
+
+## LLM summaries (optional, free)
+
+visualpy works fully without LLM — all core features are deterministic.
+For plain-English summaries, add an API key from any free provider:
+
+| Provider | Setup | Model |
+|----------|-------|-------|
+| Groq (recommended) | `export GROQ_API_KEY=...` from console.groq.com | `groq/llama-3.3-70b-versatile` (default) |
+| Google Gemini | `export GEMINI_API_KEY=...` from aistudio.google.com | `gemini/gemini-2.0-flash` |
+| OpenRouter | `export OPENROUTER_API_KEY=...` from openrouter.ai | `openrouter/deepseek/deepseek-v4-flash:free` |
+| Ollama (local) | Install Ollama, `ollama pull llama3.3` | `ollama/llama3.3` |
+
+```bash
+pip install -e ".[llm]"
+export VISUALPY_MODEL=groq/llama-3.3-70b-versatile  # override default
+export GROQ_API_KEY=your-key
+visualpy serve /path/to/scripts --summarize
+```
 ## Features
 
 - **Self-contained offline export** — `visualpy export` bundles the whole project into one HTML file (all assets inlined) that opens with no server and no internet. Send it as a single file or open it straight in a browser.
